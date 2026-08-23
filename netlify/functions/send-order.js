@@ -11,6 +11,19 @@
 const { SolapiMessageService } = require('solapi');
 const { getStore } = require('@netlify/blobs');
 
+// 이 사이트는 원래 Netlify Drop으로 시작했다가 Git 연동으로 전환된 이력이 있어,
+// Blobs 저장소가 자동으로 인식되지 않는 경우가 있습니다.
+// 그래서 siteID/token을 명시적으로 지정해 저장소에 연결합니다.
+// - NETLIFY_SITE_ID: 비밀값 아님(Project ID). 아래 기본값으로도 정상 동작합니다.
+// - NETLIFY_AUTH_TOKEN: Netlify Personal Access Token (환경변수로 등록, 비밀값)
+function getOrdersStore() {
+  return getStore({
+    name: 'orders',
+    siteID: process.env.NETLIFY_SITE_ID || '420d83b5-e8a4-41aa-b2ea-39ec9de81169',
+    token: process.env.NETLIFY_AUTH_TOKEN,
+  });
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
@@ -72,7 +85,7 @@ exports.handler = async (event) => {
     };
 
     try {
-      const store = getStore('orders');
+      const store = getOrdersStore();
       await store.setJSON(orderId, order);
     } catch (storeErr) {
       // 저장에 실패해도 문자는 이미 발송되었으므로 주문 자체는 성공으로 처리하고 로그만 남긴다.

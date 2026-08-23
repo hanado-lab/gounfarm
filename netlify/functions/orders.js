@@ -8,8 +8,17 @@
 
 const { getStore } = require('@netlify/blobs');
 
+// send-order.js와 동일한 이유로 siteID/token을 명시적으로 지정합니다.
+function getOrdersStore() {
+  return getStore({
+    name: 'orders',
+    siteID: process.env.NETLIFY_SITE_ID || '420d83b5-e8a4-41aa-b2ea-39ec9de81169',
+    token: process.env.NETLIFY_AUTH_TOKEN,
+  });
+}
+
 exports.handler = async (event) => {
-  const store = getStore('orders');
+  const store = getOrdersStore();
 
   if (event.httpMethod === 'GET') {
     try {
