@@ -51,20 +51,21 @@
 
   /* Header */
   header{position:sticky; top:0; z-index:100; background:rgba(30,27,24,.92); backdrop-filter:blur(10px); border-bottom:1px solid rgba(250,243,230,.08);}
-  header .wrap{display:flex; align-items:center; justify-content:space-between; height:84px;}
-  .logo{display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:21px; color:var(--paper);}
-  .logo svg{width:30px; height:30px;}
+  header .wrap{display:flex; align-items:center; justify-content:space-between; height:76px; gap:14px; padding-left:22px; padding-right:22px;}
+  .logo{display:flex; align-items:center; gap:8px; font-family:var(--font-display); font-size:19px; color:var(--paper); flex:none;}
+  .logo svg{width:26px; height:26px;}
   
-  .header-info{display:flex; flex-direction:column; gap:4px; font-size:12px; color:rgba(250,243,230,.85);}
-  .info-row{display:flex; align-items:center; gap:6px;}
-  .copy-btn{background:rgba(250,243,230,.15); border:none; color:var(--canola); padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:600; transition:background .2s;}
+  .header-info{display:flex; flex-direction:column; gap:3px; font-size:11px; color:rgba(250,243,230,.85); flex:none;}
+  .info-row{display:flex; align-items:center; gap:5px;}
+  .copy-btn{background:rgba(250,243,230,.15); border:none; color:var(--canola); padding:2px 5px; border-radius:4px; font-size:10px; font-weight:600; transition:background .2s;}
   .copy-btn:hover{background:rgba(250,243,230,.3);}
 
-  nav ul{display:flex; gap:20px; font-size:14.5px; font-weight:600; color:rgba(250,243,230,.78);}
+  nav{flex:1; min-width:0; overflow:hidden;}
+  nav ul{display:flex; gap:12px; font-size:12.5px; font-weight:600; color:rgba(250,243,230,.78); white-space:nowrap;}
   nav a:hover{color:var(--canola);}
-  .nav-right{display:flex; align-items:center; gap:10px;}
+  .nav-right{display:flex; align-items:center; gap:8px; flex:none;}
   
-  .nav-btn{position:relative; background:rgba(250,243,230,.1); border:1px solid rgba(250,243,230,.2); color:var(--paper); padding:8px 13px; border-radius:100px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600;}
+  .nav-btn{position:relative; background:rgba(250,243,230,.1); border:1px solid rgba(250,243,230,.2); color:var(--paper); padding:7px 11px; border-radius:100px; display:flex; align-items:center; gap:5px; font-size:12px; font-weight:600; white-space:nowrap;}
   .cart-badge{background:var(--ink); color:#fff; border-radius:50%; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;}
 
   /* Sliding Side Panel (장바구니 & 주문조회 공용) */
@@ -423,7 +424,7 @@
         <li><a href="#reviews">후기</a></li>
         <li><a href="#gallery">사진첩</a></li>
         <li><a href="#location">찾아오는 길</a></li>
-        <li><a href="#order">배송및입금안내</a></li>
+        <li><a href="#order">구매안내</a></li>
       </ul>
     </nav>
 
@@ -586,7 +587,7 @@
         <a href="#products" class="btn btn-primary">주문하기 ↓</a>
         <a href="#season" class="btn btn-dark">출하시기</a>
         <a href="#story" class="btn btn-dark">농장스토리</a>
-        <a href="#order" class="btn btn-dark">배송및입금안내</a>
+        <a href="#order" class="btn btn-dark">구매안내</a>
       </div>
     </div>
 
@@ -924,7 +925,7 @@
 <section class="order" id="order">
   <div class="wrap">
     <div>
-      <div class="eyebrow" style="color:var(--canola);">배송및입금안내</div>
+      <div class="eyebrow" style="color:var(--canola);">구매안내</div>
       <h2>구매 및 배송 안내</h2>
       <div class="order-info-list">
         <div class="oi-row"><b>발송</b><span>오후 2시 이전 주문 시 당일 선과 · 익일 발송</span></div>
@@ -965,7 +966,7 @@
       </div>
       <div>
         <h4>농장 안내</h4>
-        <ul><li><a href="#story">농장스토리</a></li><li><a href="#season">출하시기</a></li><li><a href="#order">배송및입금안내</a></li><li><a href="#reviews">구매 후기</a></li></ul>
+        <ul><li><a href="#story">농장스토리</a></li><li><a href="#season">출하시기</a></li><li><a href="#order">구매안내</a></li><li><a href="#reviews">구매 후기</a></li></ul>
       </div>
       <div>
         <h4>판매자 정보</h4>
