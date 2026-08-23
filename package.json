@@ -1,0 +1,10 @@
+{
+  "name": "goun-farm-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "고운농장 홈페이지 - 주문 접수 문자 발송(솔라피) 및 주문 저장용 Netlify Functions",
+  "dependencies": {
+    "solapi": "^5.2.0",
+    "@netlify/blobs": "^7.3.0"
+  }
+}
