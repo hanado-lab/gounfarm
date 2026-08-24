@@ -465,7 +465,7 @@
       </div>
       <div class="form-group">
         <label>연락처 *</label>
-        <input type="tel" id="custPhone" placeholder="010-0000-0000" required>
+        <input type="tel" id="custPhone" placeholder="010-0000-0000" oninput="formatPhoneInput(this)" maxlength="13" required>
       </div>
       
       <!-- 2단계 분리 배송지 주소 작성 -->
@@ -523,7 +523,7 @@
       </div>
       <div class="form-group">
         <label>연락처</label>
-        <input type="tel" id="searchPhone" placeholder="000-0000-0000">
+        <input type="tel" id="searchPhone" placeholder="000-0000-0000" oninput="formatPhoneInput(this)" maxlength="13">
       </div>
       <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="checkOrderStatus()">주문 상태 조회하기</button>
     </div>
@@ -1063,6 +1063,28 @@
     sidePanel.classList.remove('active');
   }
 
+  // 연락처 입력란 실시간 자동 하이픈 (010-0000-0000)
+  function formatPhoneInput(el) {
+    let v = el.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 7) {
+      v = v.slice(0, 3) + '-' + v.slice(3, 7) + '-' + v.slice(7);
+    } else if (v.length > 3) {
+      v = v.slice(0, 3) + '-' + v.slice(3);
+    }
+    el.value = v;
+  }
+
+  // 사장님 알림 문자용 상품 요약 축약: 품종 앞 2글자 + 등급(상/하) + 중량숫자 x 수량
+  // 예) 노지감귤(5kg/선물용) x 2개 → 노지상5x2
+  function buildShortItemsSummary(cartItems) {
+    return cartItems.map(i => {
+      const nameShort = i.name.slice(0, 2);
+      const gradeShort = i.grade === 'normal' ? '상' : '하';
+      const weightNum = String(i.weight).replace(/[^0-9]/g, '');
+      return `${nameShort}${gradeShort}${weightNum}×${i.qty}`;
+    }).join(', ');
+  }
+
   function addToCart(btn) {
     const card = btn.closest('.p-card');
     const key = card.dataset.product;
@@ -1156,6 +1178,7 @@
     const memo = document.getElementById('custMemo').value || '없음';
 
     const itemsStr = cart.map(i => `- ${i.name} (${i.weight}/${i.gradeText}) x ${i.qty}개`).join('\n');
+    const itemsShort = buildShortItemsSummary(cart);
     const totalStr = document.getElementById('finalTotalPrice').textContent;
 
     btn.disabled = true;
@@ -1170,6 +1193,7 @@
           address: `(${zipcode}) ${addr1} ${addr2}`,
           depositor, memo,
           itemsText: itemsStr,
+          itemsShort,
           totalText: totalStr
         })
       });
@@ -1388,10 +1412,10 @@
           </div>
           <div class="admin-actions" style="flex-direction:column; align-items:flex-end;">
             <label style="font-size:12px; display:flex; align-items:center; gap:6px;">
-              <input type="checkbox" ${o.paid ? 'checked' : ''} onchange="toggleOrderStatus('${o.id}','paid',this.checked)"> 입금확인
+              <input type="checkbox" ${o.paid ? 'checked' : ''} onchange="toggleOrderStatus(this,'${o.id}','paid',this.checked)"> 입금확인
             </label>
             <label style="font-size:12px; display:flex; align-items:center; gap:6px;">
-              <input type="checkbox" ${o.shipped ? 'checked' : ''} onchange="toggleOrderStatus('${o.id}','shipped',this.checked)"> 발송완료
+              <input type="checkbox" ${o.shipped ? 'checked' : ''} onchange="toggleOrderStatus(this,'${o.id}','shipped',this.checked)"> 발송완료
             </label>
           </div>
         </div>
@@ -1401,13 +1425,29 @@
       console.error(err);
     }
   }
-  async function toggleOrderStatus(id, field, value){
+  const STATUS_LABELS = { paid: '입금확인', shipped: '발송완료' };
+
+  function toggleOrderStatus(checkboxEl, id, field, value){
+    const label = STATUS_LABELS[field];
+    const msg = value
+      ? `${label}으로 표시하시겠습니까?\n고객에게 관련 문자가 자동으로 발송됩니다.`
+      : `${label}을(를) 해제하시겠습니까?`;
+
+    if(!confirm(msg)){
+      checkboxEl.checked = !value; // 취소 시 원래 상태로 복원
+      return;
+    }
+    updateOrderStatus(id, field, value);
+  }
+
+  async function updateOrderStatus(id, field, value){
     try{
-      await fetch('/.netlify/functions/orders', {
+      const res = await fetch('/.netlify/functions/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, field, value })
       });
+      if(!res.ok) throw new Error('업데이트 실패');
     }catch(err){
       alert('상태 변경에 실패했습니다.');
       console.error(err);
