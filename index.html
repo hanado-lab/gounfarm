@@ -71,6 +71,9 @@
   /* Sliding Side Panel (장바구니 & 주문조회 공용) */
   .side-panel{position:fixed; top:0; right:0; bottom:0; width:100%; max-width:420px; background:var(--paper); z-index:150; transform:translateX(100%); transition:transform .35s cubic-bezier(0.16, 1, 0.3, 1); display:flex; flex-direction:column; box-shadow:-8px 0 24px rgba(0,0,0,.15); border-left:1px solid var(--cream-line);}
   .side-panel.active{transform:translateX(0);}
+
+  /* 모바일 전용 "peek" 바텀시트 — 상품 담을 때 화면 일부만 살짝 올라오는 미리보기 */
+  .peek-sheet{display:none;}
   .panel-header{padding:20px 24px; background:var(--basalt); color:var(--paper); display:flex; justify-content:space-between; align-items:center;}
   .panel-header h3{font-family:var(--font-body); font-size:17px; font-weight:700;}
   .close-panel{background:none; border:none; color:var(--paper); font-size:20px;}
@@ -323,6 +326,22 @@
     .season-months{grid-template-columns:110px repeat(6,1fr);}
     nav{display:none;}
     .side-panel{max-width:100%; border-left:none;}
+    .peek-sheet{
+      display:block; position:fixed; left:0; right:0; bottom:0; z-index:180;
+      background:var(--paper); border-radius:20px 20px 0 0;
+      box-shadow:0 -10px 30px rgba(0,0,0,.18);
+      padding:14px 22px calc(16px + env(safe-area-inset-bottom, 0px));
+      transform:translateY(120%);
+      transition:transform .3s cubic-bezier(0.16,1,0.3,1);
+      pointer-events:none;
+      touch-action:none;
+    }
+    .peek-sheet.show{ transform:translateY(0); pointer-events:auto; }
+    .peek-handle{ width:38px; height:4px; border-radius:99px; background:var(--cream-line); margin:0 auto 10px; }
+    .peek-content{ display:flex; align-items:center; gap:10px; }
+    .peek-icon{ font-size:20px; flex:none; }
+    .peek-text{ font-size:13.5px; font-weight:700; color:var(--basalt); line-height:1.4; }
+    .peek-hint{ margin-top:8px; font-size:11px; color:rgba(30,27,24,.45); text-align:center; }
     /* 태블릿 이하에서는 min-height 완화 */
     section.hero,
     section.products,
@@ -437,6 +456,16 @@
     </div>
   </div>
 </header>
+
+<!-- 모바일 전용: 담기 직후 살짝 올라오는 미리보기 시트 -->
+<div class="peek-sheet" id="peekSheet">
+  <div class="peek-handle"></div>
+  <div class="peek-content">
+    <span class="peek-icon">🛒</span>
+    <span class="peek-text" id="peekText">담겼습니다</span>
+  </div>
+  <div class="peek-hint">위로 밀거나 탭하면 장바구니 전체 보기 · 아래로 밀면 닫기</div>
+</div>
 
 <!-- 고정 슬라이드 패널 (장바구니 & 주문조회 탭 공용) -->
 <div class="side-panel" id="sidePanel">
@@ -1043,6 +1072,7 @@
   function openPanel(mode) {
     currentMode = mode;
     sidePanel.classList.add('active');
+    hidePeekSheet();
     
     const panelTitle = document.getElementById('panelTitle');
     const cartFooter = document.getElementById('cartFooter');
@@ -1105,8 +1135,77 @@
     }
 
     updateCartUI();
+
+    if (isMobileViewport()) {
+      showPeekSheet(`${name} (${weight}/${gradeText}) 담겼습니다`);
+    } else {
+      openPanel('cart');
+    }
+  }
+
+  // ===== 모바일 peek 바텀시트 =====
+  function isMobileViewport() {
+    return window.innerWidth <= 980;
+  }
+
+  const peekSheet = document.getElementById('peekSheet');
+  const peekText = document.getElementById('peekText');
+
+  function showPeekSheet(text) {
+    peekText.textContent = text;
+    peekSheet.classList.add('show');
+  }
+  function hidePeekSheet() {
+    peekSheet.classList.remove('show');
+  }
+  function expandFromPeek() {
+    hidePeekSheet();
     openPanel('cart');
   }
+
+  (function setupPeekSheetGestures() {
+    let touchStartY = 0;
+    let touchMoved = false;
+    let justHandledTouch = false;
+
+    peekSheet.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+      touchMoved = false;
+      peekSheet.style.transition = 'none';
+    }, { passive: true });
+
+    peekSheet.addEventListener('touchmove', (e) => {
+      const dy = e.touches[0].clientY - touchStartY;
+      if (Math.abs(dy) > 6) touchMoved = true;
+      // 위로는 살짝만 따라가고(확장 예고), 아래로는 자유롭게 따라가며 닫는 느낌을 줌
+      const translate = dy < 0 ? Math.max(dy, -40) : dy;
+      peekSheet.style.transform = `translateY(${translate}px)`;
+    }, { passive: true });
+
+    peekSheet.addEventListener('touchend', (e) => {
+      peekSheet.style.transition = '';
+      peekSheet.style.transform = '';
+      const dy = e.changedTouches[0].clientY - touchStartY;
+
+      justHandledTouch = true;
+      setTimeout(() => { justHandledTouch = false; }, 350);
+
+      if (!touchMoved) {
+        expandFromPeek(); // 탭 = 확장
+      } else if (dy < -40) {
+        expandFromPeek(); // 위로 드래그 = 확장
+      } else if (dy > 40) {
+        hidePeekSheet(); // 아래로 드래그 = 닫기
+      }
+      // 그 외 애매한 드래그는 원위치(peek 유지)
+    });
+
+    // 터치를 지원하지 않는 환경(마우스 등) 대비 안전장치
+    peekSheet.addEventListener('click', () => {
+      if (justHandledTouch) return;
+      expandFromPeek();
+    });
+  })();
 
   function goToStep(step) {
     document.querySelectorAll('.cart-step').forEach(s => s.classList.remove('active'));
