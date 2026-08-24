@@ -36,7 +36,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: '잘못된 요청입니다.' }) };
   }
 
-  const { name, phone, address, depositor, memo, itemsText, totalText } = payload;
+  const { name, phone, address, depositor, memo, itemsText, itemsShort, totalText } = payload;
 
   if (!name || !phone) {
     return { statusCode: 400, body: JSON.stringify({ error: '주문자 성함과 연락처가 필요합니다.' }) };
@@ -61,11 +61,15 @@ exports.handler = async (event) => {
       text: '주문이 접수되었습니다. 입금이 확인되면 포장 작업이 진행될 예정입니다.',
     });
 
-    // 2) 사장님에게 새 주문 알림 (주문자 성함 포함)
+    // 2) 사장님에게 새 주문 알림 (주문자 성함 + 축약 주문내역 + 합계 포함)
+    //    문자 요금(SMS 단문 45자) 절약을 위해 상품명은 2글자, 등급은 상/하 1글자로 축약
+    //    예) 김혜은님 주문: 노지상5×2, 한라상3×1 / 102,900원
+    const shortSummary = itemsShort ? ` ${itemsShort}` : '';
+    const totalSummary = totalText ? ` / ${totalText}` : '';
     await messageService.send({
       to: sender,
       from: sender,
-      text: `${name} 고객님으로부터 새 주문이 들어왔어요`,
+      text: `${name}님 주문:${shortSummary}${totalSummary}`,
     });
 
     // 3) 주문 데이터 저장 (Netlify Blobs) — 관리자 "주문확인" 화면에서 사용
