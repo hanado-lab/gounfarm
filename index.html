@@ -223,6 +223,15 @@
   /* Products */
   .products{background:var(--paper);}
   .product-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:22px;}
+  .products-stage{position:relative;}
+  .season-overlay{
+    display:none; position:absolute; inset:0; z-index:20;
+    background:rgba(20,18,16,.78); border-radius:20px;
+    align-items:center; justify-content:center; text-align:center; padding:24px;
+  }
+  .season-overlay h3{font-family:var(--font-display); font-size:24px; color:#fff; font-weight:400;}
+  .season-overlay p{margin-top:8px; font-size:14px; color:rgba(255,255,255,.82); line-height:1.6;}
+  .add-btn:disabled{opacity:.4; cursor:not-allowed;}
   .p-card{background:#fff; border:1px solid var(--cream-line); border-radius:20px; overflow:hidden; display:flex; flex-direction:column; transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;}
   .p-card:hover{transform:translateY(-6px); box-shadow:0 26px 48px -22px rgba(30,27,24,.28);}
   .p-card.added-anim{border-color:var(--ink); animation:cardPulse .4s ease;}
@@ -410,6 +419,11 @@
   .admin-preview{aspect-ratio:4/3;background:#f4efe3;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#777;}
   .admin-preview img{width:100%;height:100%;object-fit:cover;}
   .admin-note{font-size:12px;color:rgba(30,27,24,.55);line-height:1.55;margin-top:14px;}
+  .admin-tabs{display:flex;gap:6px;margin-top:16px;border-bottom:1px solid rgba(30,27,24,.1);}
+  .admin-tab{flex:1;background:none;border:none;padding:11px 6px;font-size:13px;font-weight:800;color:rgba(30,27,24,.45);border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-1px;}
+  .admin-tab.active{color:var(--ink);border-bottom-color:var(--ink);}
+  .admin-tab-panel{margin-top:18px;}
+  .season-status-box{margin-top:14px;padding:14px;border-radius:12px;background:var(--paper-2);font-size:13.5px;font-weight:800;text-align:center;color:var(--basalt);}
   @media(max-width:800px){.gallery-grid{grid-template-columns:1fr 1fr}.location-grid{grid-template-columns:1fr}.admin-item{grid-template-columns:90px 1fr}.admin-actions{grid-column:1/-1}.admin-form-row{grid-template-columns:1fr}}
   @media(max-width:520px){.gallery-grid{grid-template-columns:1fr}.location-map{min-height:320px}.location-info{padding:24px}.admin-login{grid-template-columns:1fr}.admin-box{padding:20px}}
 
@@ -449,7 +463,6 @@
 
     <div class="nav-right">
       <button class="nav-btn" onclick="openPanel('status')">🔍 주문조회</button>
-      <button class="nav-btn" onclick="openOrderAdmin()">🔐 주문확인</button>
       <button class="nav-btn" id="openCartBtn" onclick="openPanel('cart')">
         🛒 장바구니 <span class="cart-badge" id="cartCount">0</span>
       </button>
@@ -711,6 +724,7 @@
       </div>
       <p>중량과 등급을 선택하고 + 버튼을 누르면 장바구니에 담기며 목록이 열립니다.</p>
     </div>
+    <div class="products-stage">
     <div class="product-grid">
 
       <div class="p-card" data-product="nogji" data-name="일반귤">
@@ -773,6 +787,13 @@
         </div>
       </div>
 
+    </div>
+    <div class="season-overlay" id="seasonOverlay">
+      <div>
+        <h3>현재는 판매 시즌이 아닙니다</h3>
+        <p>다음 수확 시기에 다시 찾아뵙겠습니다 🍊</p>
+      </div>
+    </div>
     </div>
 
     <!-- 섹션 하단 듀얼 CTA (처음으로 + 주문하기) -->
@@ -1116,6 +1137,7 @@
   }
 
   function addToCart(btn) {
+    if (seasonOut) { alert('현재는 판매 시즌이 아니라 주문을 받을 수 없습니다.'); return; }
     const card = btn.closest('.p-card');
     const key = card.dataset.product;
     const name = card.dataset.name;
@@ -1267,6 +1289,7 @@
 
   // 주문 접수 — 솔라피 연동 Netlify Function 호출 (고객/사장님 자동 문자 발송 + 주문 저장)
   async function submitOrder() {
+    if (seasonOut) { alert('현재는 판매 시즌이 아니라 주문 접수를 할 수 없습니다.'); return; }
     const btn = document.getElementById('submitOrderBtn');
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
@@ -1443,49 +1466,216 @@
     reviewSets.forEach((set, i) => set.classList.toggle('active', i === index));
     dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
   }
-  const GALLERY_KEY='goun_gallery_v1', ADMIN_PASSWORD='8911';
-  let galleryItems=JSON.parse(localStorage.getItem(GALLERY_KEY)||'null')||[
-   {id:1,title:'효돈동 감귤밭',category:'농장',desc:'제주 햇살과 바람을 맞으며 감귤이 익어가는 고운농장의 밭입니다.',image:''},
-   {id:2,title:'잘 익어가는 감귤',category:'감귤',desc:'나무에서 충분히 익어 수확을 기다리는 감귤의 모습입니다.',image:''},
-   {id:3,title:'오늘의 수확',category:'수확',desc:'잘 익은 감귤을 직접 확인하고 정성껏 수확합니다.',image:''},
-   {id:4,title:'하나씩 살펴보는 선과',category:'선과·포장',desc:'수확한 감귤을 상태별로 살펴보고 정성껏 선별합니다.',image:''},
-   {id:5,title:'주문을 준비합니다',category:'선과·포장',desc:'고객님께 도착할 감귤을 하나씩 확인하고 포장합니다.',image:''},
-   {id:6,title:'고운농장의 하루',category:'농장의 하루',desc:'계절마다 달라지는 제주 감귤농장의 모습을 기록합니다.',image:''}
-  ];
+  const ADMIN_PASSWORD='8911';
+  let galleryItems=[];
   let editingGalleryId=null,pendingGalleryImage='';
   const esc=v=>String(v||'').replace(/[&<>\'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  function saveGalleryData(){localStorage.setItem(GALLERY_KEY,JSON.stringify(galleryItems));}
-  function renderGallery(){const g=document.getElementById('galleryGrid');if(!g)return;g.innerHTML=galleryItems.length?galleryItems.map(x=>`<article class="gallery-card" onclick="viewGalleryItem(${x.id})"><div class="gallery-img">${x.image?`<img src="${x.image}" alt="${esc(x.title)}">`:'📷 사진을 등록해 주세요'}</div><div class="gallery-info"><div class="gallery-cat">${esc(x.category)}</div><h3 class="gallery-title">${esc(x.title)}</h3><p class="gallery-desc">${esc(x.desc)}</p></div></article>`).join(''):'<div class="gallery-empty">등록된 사진이 없습니다.<br>관리자 메뉴에서 사진을 추가해 주세요.</div>';}
-  function openGalleryAdmin(){document.getElementById('galleryAdminModal').classList.add('open');document.getElementById('adminPassword').focus();}
-  function closeGalleryAdmin(){document.getElementById('galleryAdminModal').classList.remove('open');}
-  function adminLogin(){if(document.getElementById('adminPassword').value!==ADMIN_PASSWORD){alert('관리자 비밀번호가 올바르지 않습니다.');return;}document.getElementById('adminLoginView').style.display='none';document.getElementById('adminGalleryView').style.display='block';renderAdminGallery();}
-  function renderAdminGallery(){document.getElementById('adminGalleryList').innerHTML=galleryItems.map(x=>`<div class="admin-item"><div class="admin-thumb">${x.image?`<img src="${x.image}" alt="">`:'사진 없음'}</div><div><b>${esc(x.title)}</b><div style="font-size:12px;color:#777;margin-top:5px">${esc(x.category)} · ${esc(x.desc)}</div></div><div class="admin-actions"><button onclick="editGalleryItem(${x.id})">수정</button><button class="danger" onclick="deleteGalleryItem(${x.id})">삭제</button></div></div>`).join('');}
-  function openGalleryEditor(id=null){editingGalleryId=id;pendingGalleryImage='';document.getElementById('galleryEditor').style.display='block';document.getElementById('adminGalleryView').style.display='none';let x=galleryItems.find(a=>a.id===id);document.getElementById('gTitle').value=x?.title||'';document.getElementById('gCategory').value=x?.category||'농장';document.getElementById('gDesc').value=x?.desc||'';document.getElementById('gFile').value='';document.getElementById('gPreview').innerHTML=x?.image?`<img src="${x.image}" alt="">`:'사진을 선택해 주세요.';}
-  function editGalleryItem(id){openGalleryEditor(id);}
-  function cancelGalleryEditor(){document.getElementById('galleryEditor').style.display='none';document.getElementById('adminGalleryView').style.display='block';renderAdminGallery();}
-  function previewGalleryImage(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{pendingGalleryImage=r.result;document.getElementById('gPreview').innerHTML=`<img src="${pendingGalleryImage}" alt="미리보기">`;};r.readAsDataURL(f);}
-  function saveGalleryItem(){let title=document.getElementById('gTitle').value.trim();if(!title){alert('사진 제목을 입력해 주세요.');return;}let old=galleryItems.find(x=>x.id===editingGalleryId),data={id:editingGalleryId||Date.now(),title,category:document.getElementById('gCategory').value,desc:document.getElementById('gDesc').value.trim(),image:pendingGalleryImage||old?.image||''};if(editingGalleryId)galleryItems=galleryItems.map(x=>x.id===editingGalleryId?data:x);else galleryItems.push(data);saveGalleryData();renderGallery();cancelGalleryEditor();}
-  function deleteGalleryItem(id){if(confirm('이 사진을 삭제할까요?')){galleryItems=galleryItems.filter(x=>x.id!==id);saveGalleryData();renderGallery();renderAdminGallery();}}
-  function viewGalleryItem(id){let x=galleryItems.find(a=>a.id===id);if(!x?.image)return;let w=window.open('','_blank');w.document.write(`<title>${esc(x.title)}</title><style>body{margin:0;background:#111;display:flex;align-items:center;justify-content:center;height:100vh}img{max-width:94%;max-height:90%;object-fit:contain}</style><img src="${x.image}" alt="${esc(x.title)}">`);}
-  renderGallery();
 
-  // ===== 주문확인 (관리자 전용) =====
-  function openOrderAdmin(){
-    document.getElementById('orderAdminModal').classList.add('open');
-    document.getElementById('orderAdminPassword').focus();
+  // ===== 사진첩 (서버 저장 — 모든 방문자 공통) =====
+  async function loadGalleryPublic(){
+    try{
+      const res = await fetch('/.netlify/functions/gallery');
+      const data = await res.json();
+      galleryItems = data.items || [];
+    }catch(err){
+      galleryItems = [];
+      console.error(err);
+    }
+    renderGallery();
   }
-  function closeOrderAdmin(){
-    document.getElementById('orderAdminModal').classList.remove('open');
+  function renderGallery(){const g=document.getElementById('galleryGrid');if(!g)return;g.innerHTML=galleryItems.length?galleryItems.map(x=>`<article class="gallery-card" onclick="viewGalleryItem('${x.id}')"><div class="gallery-img">${x.image?`<img src="${x.image}" alt="${esc(x.title)}">`:'📷 사진을 등록해 주세요'}</div><div class="gallery-info"><div class="gallery-cat">${esc(x.category)}</div><h3 class="gallery-title">${esc(x.title)}</h3><p class="gallery-desc">${esc(x.desc)}</p></div></article>`).join(''):'<div class="gallery-empty">등록된 사진이 없습니다.<br>관리자 메뉴에서 사진을 추가해 주세요.</div>';}
+  function renderAdminGallery(){
+    const listEl = document.getElementById('adminGalleryList');
+    if(!galleryItems.length){ listEl.innerHTML = '<p class="admin-note">등록된 사진이 없습니다.</p>'; return; }
+    listEl.innerHTML=galleryItems.map(x=>`<div class="admin-item"><div class="admin-thumb">${x.image?`<img src="${x.image}" alt="">`:'사진 없음'}</div><div><b>${esc(x.title)}</b><div style="font-size:12px;color:#777;margin-top:5px">${esc(x.category)} · ${esc(x.desc)}</div></div><div class="admin-actions"><button onclick="editGalleryItem('${x.id}')">수정</button><button class="danger" onclick="deleteGalleryItem('${x.id}')">삭제</button></div></div>`).join('');
   }
-  function orderAdminLogin(){
-    if(document.getElementById('orderAdminPassword').value !== ADMIN_PASSWORD){
+  function openGalleryEditor(id=null){
+    editingGalleryId=id;pendingGalleryImage='';
+    document.getElementById('galleryEditor').style.display='block';
+    let x=id?galleryItems.find(a=>a.id===id):null;
+    document.getElementById('gTitle').value=x?.title||'';
+    document.getElementById('gCategory').value=x?.category||'농장';
+    document.getElementById('gDesc').value=x?.desc||'';
+    document.getElementById('gFile').value='';
+    document.getElementById('gPreview').innerHTML=x?.image?`<img src="${x.image}" alt="">`:'사진을 선택해 주세요.';
+  }
+  function editGalleryItem(id){openGalleryEditor(id);}
+  function cancelGalleryEditor(){document.getElementById('galleryEditor').style.display='none';}
+  function previewGalleryImage(e){
+    const f=e.target.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        // 서버 저장 용량 절약을 위해 최대 1000px로 축소해서 저장
+        const maxDim = 1000;
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        pendingGalleryImage = canvas.toDataURL('image/jpeg', 0.82);
+        document.getElementById('gPreview').innerHTML = `<img src="${pendingGalleryImage}" alt="미리보기">`;
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+  }
+  async function saveGalleryItem(){
+    const title=document.getElementById('gTitle').value.trim();
+    if(!title){alert('사진 제목을 입력해 주세요.');return;}
+    const old = editingGalleryId ? galleryItems.find(x=>x.id===editingGalleryId) : null;
+    const payload = {
+      action:'save',
+      id: editingGalleryId || undefined,
+      title,
+      category: document.getElementById('gCategory').value,
+      desc: document.getElementById('gDesc').value.trim(),
+      image: pendingGalleryImage || old?.image || ''
+    };
+    try{
+      const res = await fetch('/.netlify/functions/gallery', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error('저장 실패');
+      await loadGalleryPublic();
+      renderAdminGallery();
+      cancelGalleryEditor();
+    }catch(err){
+      alert('사진 저장에 실패했습니다.');
+      console.error(err);
+    }
+  }
+  async function deleteGalleryItem(id){
+    if(!confirm('이 사진을 삭제할까요?')) return;
+    try{
+      const res = await fetch('/.netlify/functions/gallery', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', id })
+      });
+      if(!res.ok) throw new Error('삭제 실패');
+      await loadGalleryPublic();
+      renderAdminGallery();
+    }catch(err){
+      alert('삭제에 실패했습니다.');
+      console.error(err);
+    }
+  }
+  function viewGalleryItem(id){let x=galleryItems.find(a=>a.id===id);if(!x?.image)return;let w=window.open('','_blank');w.document.write(`<title>${esc(x.title)}</title><style>body{margin:0;background:#111;display:flex;align-items:center;justify-content:center;height:100vh}img{max-width:94%;max-height:90%;object-fit:contain}</style><img src="${x.image}" alt="${esc(x.title)}">`);}
+  loadGalleryPublic();
+
+  // ===== 시즌 아웃 (서버 저장 — 모든 방문자 공통) =====
+  let seasonOut = false;
+
+  async function loadSeasonStatusPublic(){
+    try{
+      const res = await fetch('/.netlify/functions/season');
+      const data = await res.json();
+      seasonOut = !!data.seasonOut;
+    }catch(err){
+      seasonOut = false;
+      console.error(err);
+    }
+    applySeasonUI();
+  }
+  function applySeasonUI(){
+    const overlay = document.getElementById('seasonOverlay');
+    const addBtns = document.querySelectorAll('.add-btn');
+    const submitBtn = document.getElementById('submitOrderBtn');
+    if(seasonOut){
+      if(overlay) overlay.style.display = 'flex';
+      addBtns.forEach(b => b.disabled = true);
+      if(submitBtn) submitBtn.disabled = true;
+    }else{
+      if(overlay) overlay.style.display = 'none';
+      addBtns.forEach(b => b.disabled = false);
+      if(submitBtn) submitBtn.disabled = false;
+    }
+  }
+  async function loadSeasonStatusAdmin(){
+    const btn = document.getElementById('seasonToggleBtn');
+    const text = document.getElementById('seasonStatusText');
+    btn.textContent = '불러오는 중...';
+    btn.disabled = true;
+    try{
+      const res = await fetch('/.netlify/functions/season');
+      const data = await res.json();
+      seasonOut = !!data.seasonOut;
+    }catch(err){
+      console.error(err);
+    }
+    text.textContent = seasonOut ? '현재 상태: 시즌 아웃 (판매 중지)' : '현재 상태: 판매 중';
+    btn.textContent = seasonOut ? '시즌 아웃 해제하기 (판매 재개)' : '시즌 아웃으로 전환하기';
+    btn.classList.toggle('btn-primary', !seasonOut);
+    btn.classList.toggle('btn-dark', seasonOut);
+    btn.disabled = false;
+    applySeasonUI();
+  }
+  async function toggleSeasonStatus(){
+    const target = !seasonOut;
+    const msg = target
+      ? '시즌 아웃으로 전환하시겠습니까?\n상품 섹션이 어둡게 표시되고, 방문자는 담기/주문 접수를 할 수 없게 됩니다.'
+      : '시즌 아웃을 해제하고 판매를 재개하시겠습니까?';
+    if(!confirm(msg)) return;
+
+    const btn = document.getElementById('seasonToggleBtn');
+    btn.disabled = true;
+    try{
+      const res = await fetch('/.netlify/functions/season', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seasonOut: target })
+      });
+      if(!res.ok) throw new Error('변경 실패');
+      seasonOut = target;
+      await loadSeasonStatusAdmin();
+    }catch(err){
+      alert('시즌 설정 변경에 실패했습니다.');
+      console.error(err);
+    }
+  }
+  loadSeasonStatusPublic();
+
+  // ===== 통합 관리자 모드 =====
+  let adminLoggedIn = false;
+  function openAdminModal(){
+    document.getElementById('adminModal').classList.add('open');
+    if(adminLoggedIn){
+      document.getElementById('adminLoginView').style.display='none';
+      document.getElementById('adminMainView').style.display='block';
+    }else{
+      document.getElementById('adminPassword').focus();
+    }
+  }
+  function closeAdminModal(){
+    document.getElementById('adminModal').classList.remove('open');
+    document.getElementById('galleryEditor').style.display='none';
+  }
+  function adminLogin(){
+    if(document.getElementById('adminPassword').value !== ADMIN_PASSWORD){
       alert('관리자 비밀번호가 올바르지 않습니다.');
       return;
     }
-    document.getElementById('orderAdminLoginView').style.display = 'none';
-    document.getElementById('orderAdminListView').style.display = 'block';
-    loadOrders();
+    adminLoggedIn = true;
+    document.getElementById('adminLoginView').style.display='none';
+    document.getElementById('adminMainView').style.display='block';
+    switchAdminTab('gallery');
   }
+  function switchAdminTab(tab){
+    document.querySelectorAll('.admin-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+    document.getElementById('adminTabGallery').style.display = tab === 'gallery' ? 'block' : 'none';
+    document.getElementById('adminTabOrders').style.display = tab === 'orders' ? 'block' : 'none';
+    document.getElementById('adminTabSeason').style.display = tab === 'season' ? 'block' : 'none';
+    document.getElementById('galleryEditor').style.display = 'none';
+
+    if(tab === 'gallery') renderAdminGallery();
+    if(tab === 'orders') loadOrders();
+    if(tab === 'season') loadSeasonStatusAdmin();
+  }
+
+  // ===== 주문확인 (관리자 전용, 통합 모드 내 탭) =====
   async function loadOrders(){
     const listEl = document.getElementById('orderAdminList');
     const emptyEl = document.getElementById('orderAdminEmpty');
@@ -1555,20 +1745,48 @@
 
 </script>
 
-<button class="admin-fab" onclick="openGalleryAdmin()">⚙ 사진첩 관리</button>
-<div class="admin-modal" id="galleryAdminModal">
+<button class="admin-fab" onclick="openAdminModal()">⚙ 관리자 모드</button>
+<div class="admin-modal" id="adminModal">
   <div class="admin-box">
-    <div class="admin-head"><h3>📷 사진첩 관리</h3><button class="admin-close" onclick="closeGalleryAdmin()">✕</button></div>
+    <div class="admin-head"><h3>⚙ 관리자 모드</h3><button class="admin-close" onclick="closeAdminModal()">✕</button></div>
+
     <div id="adminLoginView">
       <p>관리자 비밀번호를 입력해 주세요.</p>
       <div class="admin-login"><input type="password" id="adminPassword" placeholder="관리자 비밀번호"><button class="btn btn-dark" onclick="adminLogin()">로그인</button></div>
-      <p class="admin-note">※ 현재 HTML 단독 파일 버전에서는 관리자 정보가 이 브라우저의 localStorage에 저장됩니다. 실제 공개 홈페이지에서 모든 방문자에게 사진 변경사항을 공유하려면 서버/DB 연동이 필요합니다.</p>
     </div>
-    <div id="adminGalleryView" style="display:none;">
-      <button class="admin-add" onclick="openGalleryEditor()">＋ 사진 추가</button>
-      <div class="admin-list" id="adminGalleryList"></div>
-      <p class="admin-note">사진을 추가하거나 수정하면 이 브라우저의 홈페이지 사진첩에 즉시 반영됩니다. 실제 서버형 관리자 기능으로 전환할 경우 이 데이터 저장 부분만 서버 API로 교체하면 됩니다.</p>
+
+    <div id="adminMainView" style="display:none;">
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="gallery" onclick="switchAdminTab('gallery')">📷 사진첩 관리</button>
+        <button class="admin-tab" data-tab="orders" onclick="switchAdminTab('orders')">🔐 주문확인</button>
+        <button class="admin-tab" data-tab="season" onclick="switchAdminTab('season')">🌙 시즌 설정</button>
+      </div>
+
+      <!-- 사진첩 관리 -->
+      <div class="admin-tab-panel" id="adminTabGallery">
+        <button class="admin-add" onclick="openGalleryEditor()">＋ 사진 추가</button>
+        <div class="admin-list" id="adminGalleryList"></div>
+        <p class="admin-note">사진을 추가·수정·삭제하면 서버에 저장되어 모든 방문자에게 동일하게 반영됩니다.</p>
+      </div>
+
+      <!-- 주문확인 -->
+      <div class="admin-tab-panel" id="adminTabOrders" style="display:none;">
+        <div id="orderAdminList" class="admin-list"></div>
+        <p class="admin-note" id="orderAdminEmpty" style="display:none;">아직 접수된 주문이 없습니다.</p>
+      </div>
+
+      <!-- 시즌 설정 -->
+      <div class="admin-tab-panel" id="adminTabSeason" style="display:none;">
+        <p style="font-size:13px; line-height:1.7; color:rgba(30,27,24,.7);">
+          시즌 아웃을 켜면 상품 섹션이 어둡게 표시되고, 방문자는 상품 담기·주문 접수를 할 수 없습니다.<br>
+          다시 로그인해서 꺼주시기 전까지 계속 유지됩니다.
+        </p>
+        <div class="season-status-box"><span id="seasonStatusText">현재 상태: 확인 중...</span></div>
+        <button class="btn btn-primary" id="seasonToggleBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="toggleSeasonStatus()">불러오는 중...</button>
+      </div>
     </div>
+
+    <!-- 사진 추가/수정 폼 -->
     <div id="galleryEditor" style="display:none;">
       <div class="admin-form">
         <div class="admin-form-row"><div><label>사진 제목</label><input id="gTitle" placeholder="예: 효돈동 감귤밭"></div><div><label>카테고리</label><select id="gCategory"><option>농장</option><option>감귤</option><option>수확</option><option>선과·포장</option><option>농장의 하루</option></select></div></div>
@@ -1581,19 +1799,5 @@
   </div>
 </div>
 
-<!-- 주문확인 (관리자 전용) 모달 -->
-<div class="admin-modal" id="orderAdminModal">
-  <div class="admin-box">
-    <div class="admin-head"><h3>🔐 주문확인</h3><button class="admin-close" onclick="closeOrderAdmin()">✕</button></div>
-    <div id="orderAdminLoginView">
-      <p>관리자 비밀번호를 입력해 주세요.</p>
-      <div class="admin-login"><input type="password" id="orderAdminPassword" placeholder="관리자 비밀번호"><button class="btn btn-dark" onclick="orderAdminLogin()">로그인</button></div>
-    </div>
-    <div id="orderAdminListView" style="display:none;">
-      <div id="orderAdminList" class="admin-list"></div>
-      <p class="admin-note" id="orderAdminEmpty" style="display:none;">아직 접수된 주문이 없습니다.</p>
-    </div>
-  </div>
-</div>
 </body>
 </html>
