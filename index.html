@@ -277,20 +277,20 @@
   .dot{width:10px; height:10px; border-radius:50%; background:rgba(30,27,24,.2); cursor:pointer; transition:background .3s;}
   .dot.active{background:var(--ink); width:24px; border-radius:10px;}
 
-  /* Order / FAQ */
-  .order{background:var(--sea); color:var(--paper);}
+  /* Order / FAQ — 전체 따뜻한 크림 톤과 통일 */
+  .order{background:var(--paper-2); color:var(--basalt);}
   .order .wrap{display:grid; grid-template-columns:.9fr 1.1fr; gap:70px;}
-  .order h2{color:#fff;}
+  .order h2{color:var(--basalt);}
   .order-info-list{margin-top:26px; display:flex; flex-direction:column; gap:18px;}
-  .oi-row{display:flex; justify-content:space-between; padding-bottom:16px; border-bottom:1px solid rgba(250,243,230,.16); font-size:14px; gap:16px;}
-  .oi-row b{font-weight:700; color:rgba(250,243,230,.85); flex:none;}
-  .oi-row span{color:rgba(250,243,230,.6); text-align:right;}
-  .faq-item{border-bottom:1px solid rgba(250,243,230,.16);}
-  .faq-q{width:100%; display:flex; justify-content:space-between; align-items:center; padding:20px 2px; color:#fff; font-size:15px; font-weight:700; text-align:left; background:none; border:none;}
-  .faq-q .plus{font-size:20px; font-weight:400; transition:transform .3s ease; color:var(--canola);}
+  .oi-row{display:flex; justify-content:space-between; padding-bottom:16px; border-bottom:1px solid var(--cream-line); font-size:14px; gap:16px;}
+  .oi-row b{font-weight:700; color:var(--basalt); flex:none;}
+  .oi-row span{color:rgba(30,27,24,.62); text-align:right;}
+  .faq-item{border-bottom:1px solid var(--cream-line);}
+  .faq-q{width:100%; display:flex; justify-content:space-between; align-items:center; padding:20px 2px; color:var(--basalt); font-size:15px; font-weight:700; text-align:left; background:none; border:none;}
+  .faq-q .plus{font-size:20px; font-weight:400; transition:transform .3s ease; color:var(--ink);}
   .faq-item.open .plus{transform:rotate(45deg);}
   .faq-a{max-height:0; overflow:hidden; transition:max-height .35s ease;}
-  .faq-a p{padding:0 2px 20px; font-size:13.5px; line-height:1.75; color:rgba(250,243,230,.62); max-width:52ch;}
+  .faq-a p{padding:0 2px 20px; font-size:13.5px; line-height:1.75; color:rgba(30,27,24,.62); max-width:52ch;}
 
   /* Footer */
   footer{background:var(--basalt); color:rgba(250,243,230,.6); padding:64px 0 32px;}
@@ -729,7 +729,7 @@
     </div>
     <div class="season-table">
       <div class="season-row">
-        <div class="season-name">일반귤<small>극조생</small></div>
+        <div class="season-name">노지감귤<small>극조생</small></div>
         <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#E4600A; left:10.8%; width:22.6%;">10월 중순 ~ 11월 말</div></div>
       </div>
       <div class="season-row">
@@ -888,7 +888,7 @@
 <section class="order" id="order">
   <div class="wrap">
     <div>
-      <div class="eyebrow" style="color:var(--canola);">구매안내</div>
+      <div class="eyebrow">구매안내</div>
       <h2>구매 및 배송 안내</h2>
       <div class="order-info-list">
         <div class="oi-row"><b>발송</b><span>오후 2시 이전 주문 시 당일 선과 · 익일 발송</span></div>
@@ -909,8 +909,8 @@
     </div>
 
     <!-- 섹션 하단 듀얼 CTA (처음으로 + 주문하기) -->
-    <div class="section-footer-cta" style="border-top-color:rgba(250,243,230,.2);">
-      <a href="#top" class="btn btn-ghost">↑ 처음으로</a>
+    <div class="section-footer-cta">
+      <a href="#top" class="btn btn-dark">↑ 처음으로</a>
       <a href="#products" class="btn btn-primary">🛒 주문하기</a>
     </div>
   </div>
@@ -1039,7 +1039,7 @@
   }
 
   // 사장님 알림 문자용 상품 요약 축약: 품종 앞 2글자 + 등급(상/하) + 중량숫자 x 수량
-  // 예) 일반귤(5kg/선물용) x 2개 → 일반상5x2
+  // 예) 노지감귤(5kg/선물용) x 2개 → 노지상5x2
   function buildShortItemsSummary(cartItems) {
     return cartItems.map(i => {
       const nameShort = i.name.slice(0, 2);
