@@ -345,7 +345,11 @@
   .wrap{padding:0 20px;}
   section{padding:72px 0;}
   .product-grid{grid-template-columns:1fr;}
-  .foot-grid{grid-template-columns:1fr;}
+  .foot-grid{grid-template-columns:1fr 1fr; gap:24px 20px;}
+  .foot-grid > div:nth-child(1),
+  .foot-grid > div:nth-child(4){
+    grid-column: 1 / -1;
+  }
   .season-row{grid-template-columns:1fr; gap:8px;}
   .season-months{display:none;}
   .hero{min-height:380px;}
