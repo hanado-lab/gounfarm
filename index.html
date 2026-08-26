@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>고운귤밭 — 제주에서 오늘 딴 것</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Song+Myung&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <!-- 다음 우편번호 서비스 API -->
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
@@ -20,7 +18,7 @@
     --paper:    #FAF3E6;
     --paper-2:  #F2E7D3;
     --cream-line: rgba(30,27,24,.14);
-    --font-display: "Song Myung", serif;
+    --font-display: "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
     --font-body: "Pretendard", -apple-system, "Malgun Gothic", sans-serif;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
@@ -33,7 +31,7 @@
   .wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
   .eyebrow{font-size:12.5px; letter-spacing:.16em; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:8px; margin-bottom:14px;}
   .eyebrow::before{content:""; width:16px; height:1px; background:var(--ink);}
-  h1,h2,h3{font-family:var(--font-display); font-weight:400; line-height:1.28;}
+  h1,h2,h3{font-family:var(--font-display); font-weight:800; line-height:1.28; letter-spacing:-.02em;}
   
   .btn{display:inline-flex; align-items:center; gap:8px; padding:13px 22px; border-radius:100px; font-weight:700; font-size:14.5px; transition:transform .25s ease, box-shadow .25s ease, background .25s ease; border:none;}
   .btn-primary{background:var(--ink); color:#fff; box-shadow:0 10px 24px -8px rgba(228,96,10,.55);}
@@ -52,7 +50,7 @@
   /* Header */
   header{position:sticky; top:0; z-index:100; background:rgba(255,255,255,.96); backdrop-filter:blur(10px); border-bottom:1px solid var(--cream-line); box-shadow:0 2px 12px rgba(30,27,24,.04);}
   header .wrap{display:flex; align-items:center; justify-content:space-between; height:76px; gap:14px; padding-left:22px; padding-right:22px;}
-  .logo{display:flex; align-items:center; gap:8px; font-family:var(--font-display); font-size:19px; color:var(--basalt); flex:none;}
+  .logo{display:flex; align-items:center; gap:8px; font-family:var(--font-display); font-size:19px; font-weight:800; color:var(--basalt); flex:none; letter-spacing:-.02em;}
   .logo-emblem{width:38px; height:38px; object-fit:contain;}
   
   .header-info{display:flex; flex-direction:column; gap:3px; font-size:11px; color:rgba(30,27,24,.65); flex:none;}
@@ -205,7 +203,7 @@
   }
 
   .section-head{display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-bottom:52px; flex-wrap:wrap;}
-  .section-head h2{font-size:clamp(30px,3.4vw,42px);}
+  .section-head h2{font-size:clamp(30px,3.4vw,42px); font-weight:800; letter-spacing:-.02em;}
   .section-head p{color:rgba(30,27,24,.6); font-size:15px; max-width:38ch; line-height:1.7;}
 
   /* Products */
@@ -217,7 +215,7 @@
     background:rgba(20,18,16,.78); border-radius:20px;
     align-items:center; justify-content:center; text-align:center; padding:24px;
   }
-  .season-overlay h3{font-family:var(--font-display); font-size:24px; color:#fff; font-weight:400;}
+  .season-overlay h3{font-family:var(--font-display); font-size:24px; color:#fff; font-weight:800; letter-spacing:-.02em;}
   .season-overlay p{margin-top:8px; font-size:14px; color:rgba(255,255,255,.82); line-height:1.6;}
   .add-btn:disabled{opacity:.4; cursor:not-allowed;}
   .p-card{background:#fff; border:1px solid var(--cream-line); border-radius:20px; overflow:hidden; display:flex; flex-direction:column; transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;}
@@ -229,7 +227,7 @@
   .p-visual img{width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 14px 18px rgba(30,27,24,.18));}
   .p-body{padding:22px 22px 24px; display:flex; flex-direction:column; gap:9px; flex:1;}
   .p-tag{font-size:11.5px; font-weight:700; color:var(--ink); letter-spacing:.03em;}
-  .p-name{font-family:var(--font-display); font-size:21px;}
+  .p-name{font-family:var(--font-display); font-size:21px; font-weight:800; letter-spacing:-.02em;}
   .p-desc{font-size:12.8px; color:rgba(30,27,24,.58); line-height:1.62;}
   .p-season{font-size:11.5px; font-weight:700; color:var(--sea); background:rgba(51,86,106,.08); border-radius:8px; padding:6px 10px; display:inline-flex; align-self:flex-start; align-items:center; gap:6px;}
   .p-season::before{content:"◷";}
@@ -245,7 +243,7 @@
   .season{background:var(--paper-2);}
   .season-table{display:flex; flex-direction:column; gap:22px;}
   .season-row{display:grid; grid-template-columns:150px 1fr; gap:20px; align-items:center;}
-  .season-name{font-family:var(--font-display); font-size:18px;}
+  .season-name{font-family:var(--font-display); font-size:18px; font-weight:800; letter-spacing:-.02em;}
   .season-name small{display:block; font-family:var(--font-body); font-size:11.5px; font-weight:700; color:var(--ink); margin-top:2px;}
   .season-bar-wrap{position:relative; height:34px; background:#fff; border-radius:10px; border:1px solid var(--cream-line); overflow:hidden;}
   .season-bar{position:absolute; top:0; bottom:0; background:var(--bar-color, var(--ink)); border-radius:10px; display:flex; align-items:center; padding:0 12px; color:#fff; font-size:11.5px; font-weight:700; white-space:nowrap;}
@@ -257,11 +255,11 @@
   .story .wrap{display:grid; grid-template-columns:.85fr 1.15fr; gap:70px; align-items:start;}
   .story h2{color:#fff; font-size:clamp(28px,3.2vw,38px);}
   .story .lead{margin-top:20px; font-size:15px; line-height:1.85; color:rgba(250,243,230,.68);}
-  .story .signature-quote{margin-top:34px; padding-left:18px; border-left:2px solid var(--ink); font-family:var(--font-display); font-size:18px; line-height:1.7; color:var(--canola);}
+  .story .signature-quote{margin-top:34px; padding-left:18px; border-left:2px solid var(--ink); font-family:var(--font-display); font-size:17px; font-weight:600; line-height:1.7; color:var(--canola); letter-spacing:-.01em;}
   .timeline{position:relative; padding-left:6px;}
   .t-item{display:grid; grid-template-columns:56px 1fr; gap:20px; padding:22px 0; position:relative;}
   .t-item:not(:last-child)::after{content:""; position:absolute; left:27px; top:56px; bottom:-4px; width:1px; background:rgba(250,243,230,.18);}
-  .t-num{width:54px; height:54px; border-radius:50%; border:1px solid rgba(250,243,230,.3); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:18px; color:var(--canola); background:var(--basalt-2);}
+  .t-num{width:54px; height:54px; border-radius:50%; border:1px solid rgba(250,243,230,.3); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:18px; font-weight:800; color:var(--canola); background:var(--basalt-2);}
   .t-item h3{font-size:18px; color:#fff; font-weight:700; font-family:var(--font-body);}
   .t-item p{margin-top:6px; font-size:13.5px; color:rgba(250,243,230,.6); line-height:1.65; max-width:50ch;}
   .t-when{font-size:11.5px; color:var(--ink); font-weight:700; letter-spacing:.04em; margin-top:2px; display:block;}
@@ -300,7 +298,7 @@
   .foot-grid h4{color:var(--paper); font-size:13.5px; font-weight:700; margin-bottom:16px; letter-spacing:.03em;}
   .foot-grid ul li{margin-bottom:10px; font-size:13px;}
   .foot-grid ul li a:hover{color:var(--canola);}
-  .foot-logo{font-family:var(--font-display); font-size:22px; color:#fff; margin-bottom:14px; display:flex; align-items:center; gap:10px;}
+  .foot-logo{font-family:var(--font-display); font-size:22px; font-weight:800; letter-spacing:-.02em; color:#fff; margin-bottom:14px; display:flex; align-items:center; gap:10px;}
   .foot-logo img{width:36px; height:36px; object-fit:contain;}
   .foot-desc{font-size:13px; line-height:1.75; max-width:32ch;}
   .foot-bottom{display:flex; justify-content:space-between; padding-top:26px; font-size:11.5px; flex-wrap:wrap; gap:10px;}
