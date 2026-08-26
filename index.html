@@ -249,6 +249,7 @@
   .season-bar{position:absolute; top:0; bottom:0; background:var(--bar-color, var(--ink)); border-radius:10px; display:flex; align-items:center; padding:0 12px; color:#fff; font-size:11.5px; font-weight:700; white-space:nowrap;}
   .season-months{display:grid; grid-template-columns:150px repeat(6,1fr); margin-top:6px; font-size:11px; color:rgba(30,27,24,.45); font-weight:600;}
   .season-months span{text-align:center;}
+  .season-bar-label-mobile{display:none;}
 
   /* Story */
   .story{background:var(--basalt); color:var(--paper); position:relative;}
@@ -341,15 +342,24 @@
     section.order{ min-height: auto; }
   }
   @media(max-width:560px){
-    .wrap{padding:0 20px;}
-    section{padding:72px 0;}
-    .product-grid{grid-template-columns:1fr;}
-    .foot-grid{grid-template-columns:1fr;}
-    .season-row{grid-template-columns:1fr; gap:8px;}
-    .season-months{display:none;}
-    .hero{min-height:380px;}
-    .hero-cta{flex-wrap:wrap;}
+  .wrap{padding:0 20px;}
+  section{padding:72px 0;}
+  .product-grid{grid-template-columns:1fr;}
+  .foot-grid{grid-template-columns:1fr;}
+  .season-row{grid-template-columns:1fr; gap:8px;}
+  .season-months{display:none;}
+  .hero{min-height:380px;}
+  .hero-cta{flex-wrap:wrap;}
+  .season-bar span{ color:transparent; }
+  .season-bar-label-mobile{
+    display:block;
+    margin-top:6px;
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--basalt);
   }
+}
+
 
   /* 농장사진첩 */
   .gallery-section{background:var(--paper);}
@@ -729,20 +739,24 @@
     </div>
     <div class="season-table">
       <div class="season-row">
-        <div class="season-name">노지감귤<small>극조생</small></div>
-        <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#E4600A; left:10.8%; width:22.6%;">10월 중순 ~ 11월 말</div></div>
+        <div class="season-name">일반귤<small>극조생</small></div>
+        <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#E4600A; left:10.8%; width:22.6%;"><span>10월 중순 ~ 11월 말</span></div></div>
+        <div class="season-bar-label-mobile">10월 중순 ~ 11월 말</div>
       </div>
       <div class="season-row">
         <div class="season-name">황금향<small>만감류</small></div>
-        <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#F5B301; left:30.6%; width:36.1%;">11월 말 ~ 1월 말</div></div>
+        <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#F5B301; left:30.6%; width:36.1%;"><span>11월 말 ~ 1월 말</span></div></div>
+        <div class="season-bar-label-mobile">11월 말 ~ 1월 말</div>
       </div>
       <div class="season-row">
         <div class="season-name">레드향<small>만감류</small></div>
-        <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#E06B3C; left:60.8%; width:22.6%;">1월 말 ~ 2월 말</div></div>
+        <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#E06B3C; left:60.8%; width:22.6%;"><span>1월 말 ~ 2월 말</span></div></div>
+        <div class="season-bar-label-mobile">1월 말 ~ 2월 말</div>
       </div>
       <div class="season-row">
         <div class="season-name">한라봉<small>만감류</small></div>
-        <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#E8890D; left:66.7%; width:33.3%;">1월 말 ~ 3월 까지</div></div>
+        <div class="season-bar-wrap"><div class="season-bar" style="--bar-color:#E8890D; left:66.7%; width:33.3%;"><span>1월 말 ~ 3월 까지</span></div></div>
+        <div class="season-bar-label-mobile">1월 말 ~ 3월 까지</div>
       </div>
       <div class="season-months">
         <span></span><span>10월</span><span>11월</span><span>12월</span><span>1월</span><span>2월</span><span>3월</span>
