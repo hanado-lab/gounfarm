@@ -218,6 +218,16 @@
   .season-overlay h3{font-family:var(--font-display); font-size:24px; color:#fff; font-weight:800; letter-spacing:-.02em;}
   .season-overlay p{margin-top:8px; font-size:14px; color:rgba(255,255,255,.82); line-height:1.6;}
   .add-btn:disabled{opacity:.4; cursor:not-allowed;}
+
+  /* 개별 상품 시즌아웃 오버레이 */
+  .p-card{position:relative;}
+  .p-card-overlay{
+    display:none; position:absolute; inset:0; z-index:15;
+    background:rgba(20,18,16,.72); border-radius:20px;
+    align-items:center; justify-content:center; text-align:center; padding:18px;
+  }
+  .p-card.product-out .p-card-overlay{display:flex;}
+  .p-card-overlay p{color:#fff; font-size:13.5px; font-weight:700; line-height:1.5;}
   .p-card{background:#fff; border:1px solid var(--cream-line); border-radius:20px; overflow:hidden; display:flex; flex-direction:column; transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;}
   .p-card:hover{transform:translateY(-6px); box-shadow:0 26px 48px -22px rgba(30,27,24,.28);}
   .p-card.added-anim{border-color:var(--ink); animation:cardPulse .4s ease;}
@@ -655,6 +665,7 @@
     <div class="product-grid">
 
       <div class="p-card" data-product="nogji" data-name="일반귤">
+        <div class="p-card-overlay" id="cardOverlay-nogji"><p>현재 구매할 수 없는<br>시기입니다.</p></div>
         <div class="p-visual"><img src="images/nogji.jpg" alt="일반귤" loading="lazy"></div>
         <div class="p-body">
           <div class="p-tag">일반귤 (온주밀감) · 서귀포</div>
@@ -670,6 +681,7 @@
       </div>
 
       <div class="p-card" data-product="hwanggeum" data-name="황금향">
+        <div class="p-card-overlay" id="cardOverlay-hwanggeum"><p>현재 구매할 수 없는<br>시기입니다.</p></div>
         <div class="p-visual" style="--visual-bg:linear-gradient(160deg,#FDEFC7,#F4C24A);"><img src="images/hwanggeum.jpg" alt="황금향" loading="lazy"></div>
         <div class="p-body">
           <div class="p-tag">황금향 (만감류) · 서귀포</div>
@@ -685,6 +697,7 @@
       </div>
 
       <div class="p-card" data-product="redhyang" data-name="레드향">
+        <div class="p-card-overlay" id="cardOverlay-redhyang"><p>현재 구매할 수 없는<br>시기입니다.</p></div>
         <div class="p-visual" style="--visual-bg:linear-gradient(160deg,#FBD9D0,#EE9B7A);"><img src="images/redhyang.jpg" alt="레드향" loading="lazy"></div>
         <div class="p-body">
           <div class="p-tag">레드향 (만감류) · 서귀포</div>
@@ -700,6 +713,7 @@
       </div>
 
       <div class="p-card" data-product="hallabong" data-name="한라봉">
+        <div class="p-card-overlay" id="cardOverlay-hallabong"><p>현재 구매할 수 없는<br>시기입니다.</p></div>
         <div class="p-visual" style="--visual-bg:linear-gradient(160deg,#FFE3C2,#F8C27E);"><img src="images/hallabong.jpg" alt="한라봉" loading="lazy"></div>
         <div class="p-body">
           <div class="p-tag">한라봉 (만감류) · 서귀포</div>
@@ -1071,6 +1085,7 @@
     if (seasonOut) { alert('현재는 판매 시즌이 아니라 주문을 받을 수 없습니다.'); return; }
     const card = btn.closest('.p-card');
     const key = card.dataset.product;
+    if (productSeasonOut[key]) { alert('현재 구매할 수 없는 시기입니다.'); return; }
     const name = card.dataset.name;
     const weight = card.querySelector('.opt-weight').value;
     const grade = card.querySelector('.opt-grade').value;
@@ -1501,63 +1516,130 @@
 
   // ===== 시즌 아웃 (서버 저장 — 모든 방문자 공통) =====
   let seasonOut = false;
+  let productSeasonOut = { nogji:false, hallabong:false, hwanggeum:false, redhyang:false };
+  const PRODUCT_LABELS = { nogji:'일반귤', hallabong:'한라봉', hwanggeum:'황금향', redhyang:'레드향' };
 
-  async function loadSeasonStatusPublic(){
+  async function fetchSeasonStatus(){
     try{
       const res = await fetch('/.netlify/functions/season');
       const data = await res.json();
       seasonOut = !!data.seasonOut;
+      productSeasonOut = { ...productSeasonOut, ...(data.products || {}) };
     }catch(err){
-      seasonOut = false;
       console.error(err);
     }
+  }
+
+  async function loadSeasonStatusPublic(){
+    await fetchSeasonStatus();
     applySeasonUI();
   }
+
   function applySeasonUI(){
     const overlay = document.getElementById('seasonOverlay');
-    const addBtns = document.querySelectorAll('.add-btn');
     const submitBtn = document.getElementById('submitOrderBtn');
+
     if(seasonOut){
+      // 전체 시즌아웃이 1순위: 상품 섹션 전체를 덮고, 개별 카드 표시는 무시
       if(overlay) overlay.style.display = 'flex';
-      addBtns.forEach(b => b.disabled = true);
+      document.querySelectorAll('.add-btn').forEach(b => b.disabled = true);
+      document.querySelectorAll('.p-card').forEach(c => c.classList.remove('product-out'));
       if(submitBtn) submitBtn.disabled = true;
-    }else{
-      if(overlay) overlay.style.display = 'none';
-      addBtns.forEach(b => b.disabled = false);
-      if(submitBtn) submitBtn.disabled = false;
+      return;
     }
+
+    if(overlay) overlay.style.display = 'none';
+
+    // 전체 시즌아웃이 꺼져 있으면 품종별 개별 설정 적용
+    let anyProductOut = false;
+    document.querySelectorAll('.p-card').forEach(card => {
+      const key = card.dataset.product;
+      const isOut = !!productSeasonOut[key];
+      card.classList.toggle('product-out', isOut);
+      const btn = card.querySelector('.add-btn');
+      if(btn) btn.disabled = isOut;
+      if(isOut) anyProductOut = true;
+    });
+
+    if(submitBtn) submitBtn.disabled = false; // 장바구니에 이미 담긴 다른(정상) 상품은 주문 가능
   }
+
   async function loadSeasonStatusAdmin(){
     const btn = document.getElementById('seasonToggleBtn');
     const text = document.getElementById('seasonStatusText');
     btn.textContent = '불러오는 중...';
     btn.disabled = true;
-    try{
-      const res = await fetch('/.netlify/functions/season');
-      const data = await res.json();
-      seasonOut = !!data.seasonOut;
-    }catch(err){
-      console.error(err);
-    }
-    text.textContent = seasonOut ? '현재 상태: 시즌 아웃 (판매 중지)' : '현재 상태: 판매 중';
-    btn.textContent = seasonOut ? '시즌 아웃 해제하기 (판매 재개)' : '시즌 아웃으로 전환하기';
+
+    await fetchSeasonStatus();
+
+    text.textContent = seasonOut ? '현재 상태: 전체 시즌아웃 (판매 중지)' : '현재 상태: 판매 중';
+    btn.textContent = seasonOut ? '전체 시즌아웃 해제하기 (판매 재개)' : '전체 시즌아웃으로 전환하기';
     btn.classList.toggle('btn-primary', !seasonOut);
     btn.classList.toggle('btn-dark', seasonOut);
     btn.disabled = false;
+
+    renderProductSeasonList();
     applySeasonUI();
   }
-  async function toggleSeasonStatus(){
+
+  function renderProductSeasonList(){
+    const listEl = document.getElementById('productSeasonList');
+    if(!listEl) return;
+    const keys = ['nogji','hallabong','hwanggeum','redhyang'];
+    listEl.innerHTML = keys.map(key => `
+      <div class="admin-item" style="grid-template-columns:1fr auto;">
+        <div><b>${PRODUCT_LABELS[key]}</b></div>
+        <label style="font-size:12.5px; display:flex; align-items:center; gap:8px; white-space:nowrap;">
+          시즌아웃
+          <input type="checkbox" ${productSeasonOut[key] ? 'checked' : ''} onchange="toggleProductSeason(this,'${key}',this.checked)">
+        </label>
+      </div>
+    `).join('');
+  }
+
+  function toggleProductSeason(checkboxEl, key, value){
+    const label = PRODUCT_LABELS[key];
+    const msg = value
+      ? `${label}을(를) 시즌아웃으로 표시하시겠습니까?\n해당 상품만 어둡게 표시되고 담기/주문이 막힙니다.`
+      : `${label}의 시즌아웃을 해제하시겠습니까?`;
+    if(!confirm(msg)){
+      checkboxEl.checked = !value;
+      return;
+    }
+    updateProductSeason(key, value);
+  }
+
+  async function updateProductSeason(key, value){
+    try{
+      const res = await fetch('/.netlify/functions/season', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ type:'product', key, seasonOut: value })
+      });
+      if(!res.ok) throw new Error('변경 실패');
+      productSeasonOut[key] = value;
+      applySeasonUI();
+    }catch(err){
+      alert('시즌 설정 변경에 실패했습니다.');
+      console.error(err);
+    }
+  }
+
+  function toggleSeasonStatus(){
     const target = !seasonOut;
     const msg = target
-      ? '시즌 아웃으로 전환하시겠습니까?\n상품 섹션이 어둡게 표시되고, 방문자는 담기/주문 접수를 할 수 없게 됩니다.'
-      : '시즌 아웃을 해제하고 판매를 재개하시겠습니까?';
+      ? '전체 시즌아웃으로 전환하시겠습니까?\n상품 섹션 전체가 어둡게 표시되고, 방문자는 담기/주문 접수를 할 수 없게 됩니다.'
+      : '전체 시즌아웃을 해제하고 판매를 재개하시겠습니까?';
     if(!confirm(msg)) return;
+    updateOverallSeason(target);
+  }
 
+  async function updateOverallSeason(target){
     const btn = document.getElementById('seasonToggleBtn');
     btn.disabled = true;
     try{
       const res = await fetch('/.netlify/functions/season', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seasonOut: target })
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ type:'overall', seasonOut: target })
       });
       if(!res.ok) throw new Error('변경 실패');
       seasonOut = target;
@@ -1709,11 +1791,14 @@
       <!-- 시즌 설정 -->
       <div class="admin-tab-panel" id="adminTabSeason" style="display:none;">
         <p style="font-size:13px; line-height:1.7; color:rgba(30,27,24,.7);">
-          시즌 아웃을 켜면 상품 섹션이 어둡게 표시되고, 방문자는 상품 담기·주문 접수를 할 수 없습니다.<br>
-          다시 로그인해서 꺼주시기 전까지 계속 유지됩니다.
+          <b>전체 시즌아웃</b>을 켜면 상품 섹션 전체가 어두워지고 방문자는 아무 상품도 담기·주문할 수 없습니다.<br>
+          전체 시즌아웃이 꺼져 있을 때는, <b>품종별 시즌아웃</b>으로 개별 상품만 따로 끄고 켤 수 있습니다.
         </p>
         <div class="season-status-box"><span id="seasonStatusText">현재 상태: 확인 중...</span></div>
         <button class="btn btn-primary" id="seasonToggleBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="toggleSeasonStatus()">불러오는 중...</button>
+
+        <p class="admin-note" style="margin-top:26px; margin-bottom:8px; font-weight:700; color:var(--basalt);">품종별 시즌아웃</p>
+        <div id="productSeasonList" class="admin-list"></div>
       </div>
     </div>
 
