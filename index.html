@@ -559,7 +559,7 @@
     </div>
   </div>
 
-  <!-- [주문조회 모드]: 4단계 진행 상태 조회 -->
+  <!-- [주문조회 모드]: 서버 저장 주문을 성함+연락처로 조회, 최신순 목록 -->
   <div class="panel-body cart-step" id="statusPanel">
     <div style="margin-bottom:20px;">
       <div class="form-group">
@@ -570,36 +570,11 @@
         <label>연락처</label>
         <input type="tel" id="searchPhone" placeholder="000-0000-0000" oninput="formatPhoneInput(this)" maxlength="13">
       </div>
-      <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="checkOrderStatus()">주문 상태 조회하기</button>
+      <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" id="statusSearchBtn" onclick="checkOrderStatus()">주문 상태 조회하기</button>
     </div>
 
-    <div id="statusResult" style="display:none; padding-top:16px; border-top:1px dashed var(--cream-line);">
-      <div style="font-size:13px; font-weight:700; color:var(--ink);" id="statusCustTitle">홍길동님의 최근 주문 현황</div>
-      
-      <!-- 간소화된 4단계 시각화 타임라인 -->
-      <div class="status-timeline">
-        <div class="status-step" id="step1">
-          <div class="status-icon">1</div>
-          <div class="status-label">주문접수</div>
-        </div>
-        <div class="status-step" id="step2">
-          <div class="status-icon">2</div>
-          <div class="status-label">입금확인</div>
-        </div>
-        <div class="status-step" id="step3">
-          <div class="status-icon">3</div>
-          <div class="status-label">상품준비</div>
-        </div>
-        <div class="status-step" id="step4">
-          <div class="status-icon">4</div>
-          <div class="status-label">발송완료</div>
-        </div>
-      </div>
-
-      <div style="background:#fff; border:1px solid var(--cream-line); padding:14px; border-radius:10px; font-size:12.5px; line-height:1.6;" id="statusDetailText">
-        -
-      </div>
-    </div>
+    <div id="statusResultList" style="display:none;"></div>
+    <p class="admin-note" id="statusEmpty" style="display:none; padding-top:16px; border-top:1px dashed var(--cream-line);">일치하는 주문 내역이 없습니다.<br>성함과 연락처를 다시 확인해 주세요.</p>
   </div>
 
   <!-- 하단 푸터 (장바구니 모드 전용) -->
@@ -1220,16 +1195,6 @@
       return;
     }
 
-    // 주문 내역 로컬에 임시 저장 (주문조회용)
-    const orderData = {
-      name, phone,
-      items: cart.map(i => `${i.name}(${i.weight}/${i.gradeText})x${i.qty}`).join(', '),
-      total: document.getElementById('finalTotalPrice').textContent,
-      status: 1, // 1: 주문접수
-      date: new Date().toLocaleDateString()
-    };
-    localStorage.setItem('goun_order_' + phone, JSON.stringify(orderData));
-
     goToStep(3);
   }
 
@@ -1350,56 +1315,81 @@
     goToStep(1);
   }
 
-  // 4단계 주문 상태 조회
-  function checkOrderStatus() {
+  // 주문조회 — 서버에 저장된 주문 중 성함+연락처가 모두 일치하는 건을 최신순으로 표시
+  async function checkOrderStatus() {
     const sName = document.getElementById('searchName').value.trim();
     const sPhone = document.getElementById('searchPhone').value.trim();
-    const resultBox = document.getElementById('statusResult');
+    const listBox = document.getElementById('statusResultList');
+    const emptyBox = document.getElementById('statusEmpty');
+    const btn = document.getElementById('statusSearchBtn');
 
     if(!sName || !sPhone) {
       alert('조회하실 성함과 연락처를 입력해 주세요.');
       return;
     }
 
-    const savedData = localStorage.getItem('goun_order_' + sPhone);
+    btn.disabled = true;
+    btn.textContent = '조회 중...';
+    listBox.style.display = 'none';
+    emptyBox.style.display = 'none';
 
-    resultBox.style.display = 'block';
-    document.getElementById('statusCustTitle').textContent = `${sName}님의 최근 주문 현황`;
+    try {
+      const res = await fetch(`/.netlify/functions/order-lookup?name=${encodeURIComponent(sName)}&phone=${encodeURIComponent(sPhone)}`);
+      if(!res.ok) throw new Error('조회 실패');
+      const data = await res.json();
+      const orders = data.orders || [];
 
-    // 4단계 스타일 초기화
-    for(let i=1; i<=4; i++) {
-      document.getElementById('step' + i).classList.remove('active');
-    }
-
-    if(savedData) {
-      const order = JSON.parse(savedData);
-      const step = order.status || 1; // 기본 1단계(주문접수)
-
-      for(let i=1; i<=step; i++) {
-        document.getElementById('step' + i).classList.add('active');
+      if(orders.length === 0){
+        emptyBox.style.display = 'block';
+      } else {
+        renderOrderStatusList(orders);
+        listBox.style.display = 'block';
       }
-
-      const detailTexts = {
-        1: "주문서가 정상 접수되었습니다. 아래 계좌로 입금해 주시면 확인 후 수확이 시작됩니다.",
-        2: "입금이 확인되었습니다! 오늘 아침 효돈동 밭 수확 명단에 등록되었습니다.",
-        3: "효돈동 밭에서 당일 수확 및 당도 실측을 마친 후 정성껏 상자 포장 중입니다.",
-        4: "택배사 인계가 완료되었습니다. 안전하게 배송해 드리겠습니다."
-      };
-
-      document.getElementById('statusDetailText').innerHTML = `
-        <b>주문일자:</b> ${order.date}<br>
-        <b>주문상품:</b> ${order.items}<br>
-        <b>결제금액:</b> ${order.total}<br>
-        <b>진행상태:</b> <span style="color:var(--ink); font-weight:700;">${detailTexts[step]}</span>
-      `;
-    } else {
-      // 등록된 주문이 없을 경우 샘플 1단계 표시
-      document.getElementById('step1').classList.add('active');
-      document.getElementById('statusDetailText').innerHTML = `
-        <b>주문 내역:</b> 최근 주문서가 접수되어 입금 확인 대기 중입니다.<br>
-        <small style="color:rgba(30,27,24,.6);">(문의: 010-9880-2835)</small>
-      `;
+    } catch(err) {
+      alert('주문 조회 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '주문 상태 조회하기';
     }
+  }
+
+  const STATUS_DETAIL_TEXTS = {
+    1: "주문서가 정상 접수되었습니다. 아래 계좌로 입금해 주시면 확인 후 수확이 시작됩니다.",
+    2: "입금이 확인되었습니다! 효돈동 밭 수확 명단에 등록되어 상품을 준비 중입니다.",
+    3: "효돈동 밭에서 당일 수확 및 당도 실측을 마친 후 정성껏 상자 포장 중입니다.",
+    4: "택배사 인계가 완료되었습니다. 안전하게 배송해 드리겠습니다."
+  };
+
+  function computeOrderStep(order){
+    if(order.shipped) return 4;
+    if(order.paid) return 3;
+    return 1;
+  }
+
+  function renderOrderStatusList(orders){
+    const listBox = document.getElementById('statusResultList');
+    listBox.innerHTML = orders.map((order, idx) => {
+      const step = computeOrderStep(order);
+      const dateStr = order.createdAt ? new Date(order.createdAt).toLocaleDateString('ko-KR') : '-';
+      const stepsHtml = [1,2,3,4].map(i => `
+        <div class="status-step ${i <= step ? 'active' : ''}">
+          <div class="status-icon">${i}</div>
+          <div class="status-label">${['주문접수','입금확인','상품준비','발송완료'][i-1]}</div>
+        </div>
+      `).join('');
+      return `
+        <div style="padding-top:16px; margin-top:${idx===0?'0':'16px'}; border-top:1px dashed var(--cream-line);">
+          <div style="font-size:13px; font-weight:700; color:var(--ink);">${esc(order.name)}님의 주문 · ${dateStr}</div>
+          <div class="status-timeline">${stepsHtml}</div>
+          <div style="background:#fff; border:1px solid var(--cream-line); padding:14px; border-radius:10px; font-size:12.5px; line-height:1.6;">
+            <b>주문상품:</b> ${esc(order.items).replace(/\n/g,'<br>')}<br>
+            <b>결제금액:</b> ${esc(order.total)}<br>
+            <b>진행상태:</b> <span style="color:var(--ink); font-weight:700;">${STATUS_DETAIL_TEXTS[step]}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   // 후기 슬라이더
