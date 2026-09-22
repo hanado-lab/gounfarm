@@ -454,13 +454,13 @@
 
     <nav>
       <ul>
-        <li><a href="#products">주문하기</a></li>
-        <li><a href="#season">출하시기</a></li>
-        <li><a href="#story">농장스토리</a></li>
-        <li><a href="#reviews">후기</a></li>
-        <li><a href="#gallery">사진첩</a></li>
-        <li><a href="#location">찾아오는 길</a></li>
-        <li><a href="#order">구매안내</a></li>
+        <li id="navlink-products"><a href="#products">주문하기</a></li>
+        <li id="navlink-season"><a href="#season">출하시기</a></li>
+        <li id="navlink-story"><a href="#story">농장스토리</a></li>
+        <li id="navlink-reviews"><a href="#reviews">후기</a></li>
+        <li id="navlink-gallery"><a href="#gallery">사진첩</a></li>
+        <li id="navlink-location"><a href="#location">찾아오는 길</a></li>
+        <li id="navlink-order"><a href="#order">구매안내</a></li>
       </ul>
     </nav>
 
@@ -1641,6 +1641,72 @@
   }
   loadSeasonStatusPublic();
 
+  // ===== 섹션 관리 (서버 저장 — 모든 방문자 공통, 히어로 제외) =====
+  const SECTION_KEYS = ['products','season','story','reviews','gallery','location','order'];
+  const SECTION_LABELS = { products:'상품', season:'출하시기', story:'농장스토리', reviews:'후기', gallery:'사진첩', location:'찾아오는 길', order:'구매안내' };
+  let sectionVisibility = { products:true, season:true, story:true, reviews:true, gallery:true, location:true, order:true };
+
+  async function fetchSectionVisibility(){
+    try{
+      const res = await fetch('/.netlify/functions/sections');
+      const data = await res.json();
+      sectionVisibility = { ...sectionVisibility, ...(data.sections || {}) };
+    }catch(err){
+      console.error(err);
+    }
+  }
+
+  async function loadSectionVisibilityPublic(){
+    await fetchSectionVisibility();
+    applySectionVisibility();
+  }
+
+  function applySectionVisibility(){
+    SECTION_KEYS.forEach(key => {
+      const visible = sectionVisibility[key] !== false;
+      const sectionEl = document.getElementById(key);
+      const navEl = document.getElementById('navlink-' + key);
+      if(sectionEl) sectionEl.style.display = visible ? '' : 'none';
+      if(navEl) navEl.style.display = visible ? '' : 'none';
+    });
+  }
+
+  async function loadSectionVisibilityAdmin(){
+    await fetchSectionVisibility();
+    renderSectionVisibilityList();
+    applySectionVisibility();
+  }
+
+  function renderSectionVisibilityList(){
+    const listEl = document.getElementById('sectionVisibilityList');
+    if(!listEl) return;
+    listEl.innerHTML = SECTION_KEYS.map(key => `
+      <div class="admin-item" style="grid-template-columns:1fr auto;">
+        <div><b>${SECTION_LABELS[key]}</b></div>
+        <label style="font-size:12.5px; display:flex; align-items:center; gap:8px; white-space:nowrap;">
+          노출
+          <input type="checkbox" ${sectionVisibility[key] !== false ? 'checked' : ''} onchange="toggleSectionVisibility('${key}',this.checked)">
+        </label>
+      </div>
+    `).join('');
+  }
+
+  async function toggleSectionVisibility(key, visible){
+    try{
+      const res = await fetch('/.netlify/functions/sections', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ key, visible })
+      });
+      if(!res.ok) throw new Error('변경 실패');
+      sectionVisibility[key] = visible;
+      applySectionVisibility();
+    }catch(err){
+      alert('섹션 설정 변경에 실패했습니다.');
+      console.error(err);
+    }
+  }
+  loadSectionVisibilityPublic();
+
   // ===== 통합 관리자 모드 =====
   let adminLoggedIn = false;
   function openAdminModal(){
@@ -1671,11 +1737,13 @@
     document.getElementById('adminTabGallery').style.display = tab === 'gallery' ? 'block' : 'none';
     document.getElementById('adminTabOrders').style.display = tab === 'orders' ? 'block' : 'none';
     document.getElementById('adminTabSeason').style.display = tab === 'season' ? 'block' : 'none';
+    document.getElementById('adminTabSections').style.display = tab === 'sections' ? 'block' : 'none';
     document.getElementById('galleryEditor').style.display = 'none';
 
     if(tab === 'gallery') renderAdminGallery();
     if(tab === 'orders') loadOrders();
     if(tab === 'season') loadSeasonStatusAdmin();
+    if(tab === 'sections') loadSectionVisibilityAdmin();
   }
 
   // ===== 주문확인 (관리자 전용, 통합 모드 내 탭) =====
@@ -1763,6 +1831,7 @@
         <button class="admin-tab active" data-tab="gallery" onclick="switchAdminTab('gallery')">📷 사진첩 관리</button>
         <button class="admin-tab" data-tab="orders" onclick="switchAdminTab('orders')">🔐 주문확인</button>
         <button class="admin-tab" data-tab="season" onclick="switchAdminTab('season')">🌙 시즌 설정</button>
+        <button class="admin-tab" data-tab="sections" onclick="switchAdminTab('sections')">🧩 섹션 관리</button>
       </div>
 
       <!-- 사진첩 관리 -->
@@ -1789,6 +1858,14 @@
 
         <p class="admin-note" style="margin-top:26px; margin-bottom:8px; font-weight:700; color:var(--basalt);">품종별 시즌아웃</p>
         <div id="productSeasonList" class="admin-list"></div>
+      </div>
+
+      <!-- 섹션 관리 -->
+      <div class="admin-tab-panel" id="adminTabSections" style="display:none;">
+        <p style="font-size:13px; line-height:1.7; color:rgba(30,27,24,.7);">
+          섹션을 끄면 홈페이지에서 해당 섹션과 상단 메뉴 링크가 모두 숨겨집니다. (히어로 섹션은 항상 노출됩니다.)
+        </p>
+        <div id="sectionVisibilityList" class="admin-list" style="margin-top:16px;"></div>
       </div>
     </div>
 
