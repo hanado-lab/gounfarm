@@ -982,14 +982,15 @@
     });
   });
 
-  // 상품 가격
-  const PRICES = {
+  // 상품 가격 (기본값 — 서버에 저장된 값이 있으면 로드 후 덮어씀)
+  let PRICES = {
     nogji:     { normal:{'3kg':12900,'5kg':18900,'10kg':32000}, ugly:{'3kg':9900, '5kg':14900,'10kg':25000} },
     hwanggeum: { normal:{'3kg':27000,'5kg':41000,'10kg':74000}, ugly:{'3kg':20500,'5kg':31500,'10kg':56000} },
     redhyang:  { normal:{'3kg':28000,'5kg':43000,'10kg':76000}, ugly:{'3kg':21500,'5kg':33000,'10kg':58000} },
     hallabong: { normal:{'3kg':25000,'5kg':38000,'10kg':68000}, ugly:{'3kg':19000,'5kg':29000,'10kg':52000} },
   };
 
+  const priceUpdaters = [];
   document.querySelectorAll('.p-card').forEach(card=>{
     const key = card.dataset.product;
     const weightSel = card.querySelector('.opt-weight');
@@ -1003,7 +1004,20 @@
     weightSel.addEventListener('change', updatePrice);
     gradeSel.addEventListener('change', updatePrice);
     updatePrice();
+    priceUpdaters.push(updatePrice);
   });
+
+  async function loadPricesPublic(){
+    try{
+      const res = await fetch('/.netlify/functions/prices');
+      const data = await res.json();
+      if(data.prices) PRICES = data.prices;
+    }catch(err){
+      console.error(err);
+    }
+    priceUpdaters.forEach(fn => fn());
+  }
+  loadPricesPublic();
 
   // 장바구니 & 패널 제어
   let cart = [];
@@ -1707,6 +1721,66 @@
   }
   loadSectionVisibilityPublic();
 
+  // ===== 가격 관리 (서버 저장 — 모든 방문자 공통) =====
+  const PRICE_KEYS = ['nogji','hallabong','hwanggeum','redhyang'];
+  const PRICE_LABELS = { nogji:'일반귤', hallabong:'한라봉', hwanggeum:'황금향', redhyang:'레드향' };
+  const PRICE_WEIGHTS = ['3kg','5kg','10kg'];
+  const PRICE_GRADES = [['normal','선물용'], ['ugly','가정용(못난이)']];
+
+  function renderPriceEditor(){
+    const el = document.getElementById('priceEditorList');
+    if(!el) return;
+    el.innerHTML = PRICE_KEYS.map(key => `
+      <div class="admin-item" style="grid-template-columns:1fr;">
+        <div>
+          <b>${PRICE_LABELS[key]}</b>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;">
+            ${PRICE_GRADES.map(([gKey,gLabel]) => PRICE_WEIGHTS.map(w => `
+              <div>
+                <label style="font-size:10.5px; color:#777; display:block; margin-bottom:4px;">${gLabel} ${w}</label>
+                <input type="number" id="price-${key}-${gKey}-${w}" value="${PRICES[key][gKey][w]}" style="width:100%; padding:7px 8px; border:1px solid var(--cream-line); border-radius:8px; font-size:12.5px;">
+              </div>
+            `).join('')).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function savePrices(){
+    const btn = document.getElementById('priceSaveBtn');
+    const updated = {};
+    PRICE_KEYS.forEach(key => {
+      updated[key] = { normal:{}, ugly:{} };
+      PRICE_GRADES.forEach(([gKey]) => {
+        PRICE_WEIGHTS.forEach(w => {
+          const input = document.getElementById(`price-${key}-${gKey}-${w}`);
+          const val = parseInt(input.value, 10);
+          updated[key][gKey][w] = isNaN(val) ? 0 : val;
+        });
+      });
+    });
+
+    btn.disabled = true;
+    btn.textContent = '저장 중...';
+    try{
+      const res = await fetch('/.netlify/functions/prices', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ prices: updated })
+      });
+      if(!res.ok) throw new Error('저장 실패');
+      PRICES = updated;
+      priceUpdaters.forEach(fn => fn());
+      alert('가격이 저장되었습니다. 모든 방문자 화면에 반영됩니다.');
+    }catch(err){
+      alert('가격 저장에 실패했습니다.');
+      console.error(err);
+    }finally{
+      btn.disabled = false;
+      btn.textContent = '가격 저장하기';
+    }
+  }
+
   // ===== 통합 관리자 모드 =====
   let adminLoggedIn = false;
   function openAdminModal(){
@@ -1738,12 +1812,14 @@
     document.getElementById('adminTabOrders').style.display = tab === 'orders' ? 'block' : 'none';
     document.getElementById('adminTabSeason').style.display = tab === 'season' ? 'block' : 'none';
     document.getElementById('adminTabSections').style.display = tab === 'sections' ? 'block' : 'none';
+    document.getElementById('adminTabPrices').style.display = tab === 'prices' ? 'block' : 'none';
     document.getElementById('galleryEditor').style.display = 'none';
 
     if(tab === 'gallery') renderAdminGallery();
     if(tab === 'orders') loadOrders();
     if(tab === 'season') loadSeasonStatusAdmin();
     if(tab === 'sections') loadSectionVisibilityAdmin();
+    if(tab === 'prices') renderPriceEditor();
   }
 
   // ===== 주문확인 (관리자 전용, 통합 모드 내 탭) =====
@@ -1832,6 +1908,7 @@
         <button class="admin-tab" data-tab="orders" onclick="switchAdminTab('orders')">🔐 주문확인</button>
         <button class="admin-tab" data-tab="season" onclick="switchAdminTab('season')">🌙 시즌 설정</button>
         <button class="admin-tab" data-tab="sections" onclick="switchAdminTab('sections')">🧩 섹션 관리</button>
+        <button class="admin-tab" data-tab="prices" onclick="switchAdminTab('prices')">💰 가격 관리</button>
       </div>
 
       <!-- 사진첩 관리 -->
@@ -1866,6 +1943,15 @@
           섹션을 끄면 홈페이지에서 해당 섹션과 상단 메뉴 링크가 모두 숨겨집니다. (히어로 섹션은 항상 노출됩니다.)
         </p>
         <div id="sectionVisibilityList" class="admin-list" style="margin-top:16px;"></div>
+      </div>
+
+      <!-- 가격 관리 -->
+      <div class="admin-tab-panel" id="adminTabPrices" style="display:none;">
+        <p style="font-size:13px; line-height:1.7; color:rgba(30,27,24,.7);">
+          가격을 수정하고 저장하면 모든 방문자 화면에 즉시 반영됩니다. (이미 접수된 과거 주문의 결제금액에는 영향 없습니다.)
+        </p>
+        <div id="priceEditorList" style="margin-top:16px;"></div>
+        <button class="btn btn-primary" id="priceSaveBtn" style="width:100%; justify-content:center; margin-top:16px;" onclick="savePrices()">가격 저장하기</button>
       </div>
     </div>
 
