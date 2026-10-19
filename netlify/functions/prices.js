@@ -1,7 +1,7 @@
-// 상품 가격 설정 Netlify Function — 전체 방문자에게 공통 적용
-// GET  : 현재 가격표 전체 반환 (저장된 값이 없으면 기본값)
-// POST : 가격표 전체를 교체 저장 (관리자 전용, 프론트엔드 비밀번호 로그인에 의존)
-//        body: { prices: { nogji:{normal:{...}, ugly:{...}}, ... } }
+// 상품 가격/판매옵션 설정 Netlify Function — 전체 방문자에게 공통 적용
+// GET  : { prices, options } 반환 (저장된 값이 없으면 기본값)
+// POST : body { prices?, options? } 를 저장 (관리자 전용, 프론트엔드 비밀번호 로그인에 의존)
+//        options[품종] = { grade: 'both'|'normal'|'ugly'|'none', weights: ['3kg','5kg','10kg'] 중 일부 }
 
 const { getStore } = require('@netlify/blobs');
 
@@ -14,6 +14,10 @@ function getSettingsStore() {
 }
 
 const PRICES_KEY = 'product-prices';
+const OPTIONS_KEY = 'product-options';
+const PRODUCT_KEYS = ['nogji', 'hallabong', 'hwanggeum', 'redhyang'];
+const GRADE_MODES = ['both', 'normal', 'ugly', 'none'];
+const WEIGHTS = ['3kg', '5kg', '10kg'];
 
 function defaultPrices() {
   return {
@@ -24,29 +28,68 @@ function defaultPrices() {
   };
 }
 
+function defaultOptions() {
+  const o = {};
+  PRODUCT_KEYS.forEach(k => { o[k] = { grade: 'both', weights: WEIGHTS.slice() }; });
+  return o;
+}
+
+// 잘못된 값이 들어와도 항상 안전한 형태로 정리
+function sanitizeOptions(input) {
+  const out = defaultOptions();
+  if (!input || typeof input !== 'object') return out;
+  PRODUCT_KEYS.forEach(k => {
+    const o = input[k];
+    if (!o || typeof o !== 'object') return;
+    const grade = GRADE_MODES.includes(o.grade) ? o.grade : 'both';
+    let weights = Array.isArray(o.weights) ? WEIGHTS.filter(w => o.weights.includes(w)) : WEIGHTS.slice();
+    if (weights.length === 0) weights = WEIGHTS.slice(); // 최소 1개 중량은 판매
+    out[k] = { grade, weights };
+  });
+  return out;
+}
+
+async function readJson(store, key) {
+  try {
+    return await store.get(key, { type: 'json' });
+  } catch (err) {
+    return null;
+  }
+}
+
 exports.handler = async (event) => {
   const store = getSettingsStore();
 
   if (event.httpMethod === 'GET') {
-    try {
-      const data = await store.get(PRICES_KEY, { type: 'json' });
-      return { statusCode: 200, body: JSON.stringify({ prices: data || defaultPrices() }) };
-    } catch (err) {
-      return { statusCode: 200, body: JSON.stringify({ prices: defaultPrices() }) };
-    }
+    const prices = await readJson(store, PRICES_KEY);
+    const options = await readJson(store, OPTIONS_KEY);
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        prices: prices || defaultPrices(),
+        options: sanitizeOptions(options),
+      }),
+    };
   }
 
   if (event.httpMethod === 'POST') {
     try {
-      const { prices } = JSON.parse(event.body || '{}');
-      if (!prices || typeof prices !== 'object') {
-        return { statusCode: 400, body: JSON.stringify({ error: '잘못된 가격 데이터입니다.' }) };
+      const { prices, options } = JSON.parse(event.body || '{}');
+      if (prices !== undefined) {
+        if (!prices || typeof prices !== 'object') {
+          return { statusCode: 400, body: JSON.stringify({ error: '잘못된 가격 데이터입니다.' }) };
+        }
+        await store.setJSON(PRICES_KEY, prices);
       }
-      await store.setJSON(PRICES_KEY, prices);
-      return { statusCode: 200, body: JSON.stringify({ ok: true, prices }) };
+      let savedOptions;
+      if (options !== undefined) {
+        savedOptions = sanitizeOptions(options);
+        await store.setJSON(OPTIONS_KEY, savedOptions);
+      }
+      return { statusCode: 200, body: JSON.stringify({ ok: true, prices, options: savedOptions }) };
     } catch (err) {
       console.error('prices POST error:', err);
-      return { statusCode: 500, body: JSON.stringify({ error: '가격 저장에 실패했습니다.' }) };
+      return { statusCode: 500, body: JSON.stringify({ error: '저장에 실패했습니다.' }) };
     }
   }
 
