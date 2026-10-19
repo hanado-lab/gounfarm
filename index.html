@@ -243,6 +243,7 @@
   .p-season::before{content:"◷";}
   .p-options{display:flex; gap:8px; margin-top:2px;}
   .p-options select{flex:1; font-size:12.5px; font-weight:600; padding:9px 10px; border-radius:9px; border:1px solid var(--cream-line); background:#fff; color:var(--basalt);}
+  .p-options .opt-fixed{flex:1; font-size:12.5px; font-weight:700; padding:9px 10px; border-radius:9px; background:var(--paper-2); color:var(--basalt); text-align:center;}
   .p-foot{display:flex; align-items:center; justify-content:space-between; margin-top:6px; padding-top:14px; border-top:1px dashed var(--cream-line);}
   .p-price{font-size:18px; font-weight:800;}
   .add-btn{width:38px; height:38px; border-radius:50%; background:var(--basalt); color:var(--paper); display:flex; align-items:center; justify-content:center; font-size:19px; transition:background .2s ease, transform .1s ease; border:none;}
@@ -990,7 +991,22 @@
     hallabong: { normal:{'3kg':25000,'5kg':38000,'10kg':68000}, ugly:{'3kg':19000,'5kg':29000,'10kg':52000} },
   };
 
-  const priceUpdaters = [];
+  // 품종별 판매 옵션 (기본값 — 서버에 저장된 값이 있으면 로드 후 덮어씀)
+  const ALL_WEIGHTS = ['3kg','5kg','10kg'];
+  const GRADE_NAMES = { normal:'선물용', ugly:'가정용(못난이)' };
+  let PRODUCT_OPTIONS = {
+    nogji:     { grade:'both', weights:ALL_WEIGHTS.slice() },
+    hwanggeum: { grade:'both', weights:ALL_WEIGHTS.slice() },
+    redhyang:  { grade:'both', weights:ALL_WEIGHTS.slice() },
+    hallabong: { grade:'both', weights:ALL_WEIGHTS.slice() },
+  };
+  function allowedGrades(mode){
+    return mode === 'both' ? ['normal','ugly'] : (mode === 'ugly' ? ['ugly'] : ['normal']);
+  }
+  function optText(weight, gradeText){
+    return gradeText ? `${weight}/${gradeText}` : weight;
+  }
+
   document.querySelectorAll('.p-card').forEach(card=>{
     const key = card.dataset.product;
     const weightSel = card.querySelector('.opt-weight');
@@ -1003,19 +1019,57 @@
     }
     weightSel.addEventListener('change', updatePrice);
     gradeSel.addEventListener('change', updatePrice);
+    card._updatePrice = updatePrice;
     updatePrice();
-    priceUpdaters.push(updatePrice);
   });
+
+  // 관리자가 설정한 판매 등급/중량에 맞게 각 상품 카드의 선택 옵션을 다시 구성
+  function applyProductOptions(){
+    document.querySelectorAll('.p-card').forEach(card=>{
+      const key = card.dataset.product;
+      const opt = PRODUCT_OPTIONS[key] || { grade:'both', weights:ALL_WEIGHTS };
+      const weightSel = card.querySelector('.opt-weight');
+      const gradeSel = card.querySelector('.opt-grade');
+
+      let wFixed = card.querySelector('.opt-weight-fixed');
+      if(!wFixed){ wFixed = document.createElement('span'); wFixed.className = 'opt-fixed opt-weight-fixed'; weightSel.after(wFixed); }
+      let gFixed = card.querySelector('.opt-grade-fixed');
+      if(!gFixed){ gFixed = document.createElement('span'); gFixed.className = 'opt-fixed opt-grade-fixed'; gradeSel.after(gFixed); }
+
+      // 중량
+      const weights = ALL_WEIGHTS.filter(w => opt.weights.includes(w));
+      const prevW = weightSel.value;
+      weightSel.innerHTML = weights.map(w => `<option value="${w}">${w}</option>`).join('');
+      weightSel.value = weights.includes(prevW) ? prevW : (weights.includes('5kg') ? '5kg' : weights[0]);
+      const singleW = weights.length === 1;
+      weightSel.style.display = singleW ? 'none' : '';
+      wFixed.style.display = singleW ? '' : 'none';
+      wFixed.textContent = weights[0];
+
+      // 등급
+      const grades = allowedGrades(opt.grade);
+      const prevG = gradeSel.value;
+      gradeSel.innerHTML = grades.map(g => `<option value="${g}">${GRADE_NAMES[g]}</option>`).join('');
+      gradeSel.value = grades.includes(prevG) ? prevG : grades[0];
+      const singleG = grades.length === 1;
+      gradeSel.style.display = singleG ? 'none' : '';
+      gFixed.style.display = (singleG && opt.grade !== 'none') ? '' : 'none';
+      gFixed.textContent = GRADE_NAMES[grades[0]];
+
+      if(card._updatePrice) card._updatePrice();
+    });
+  }
 
   async function loadPricesPublic(){
     try{
       const res = await fetch('/.netlify/functions/prices');
       const data = await res.json();
       if(data.prices) PRICES = data.prices;
+      if(data.options) PRODUCT_OPTIONS = data.options;
     }catch(err){
       console.error(err);
     }
-    priceUpdaters.forEach(fn => fn());
+    applyProductOptions();
   }
   loadPricesPublic();
 
@@ -1064,7 +1118,7 @@
   function buildShortItemsSummary(cartItems) {
     return cartItems.map(i => {
       const nameShort = i.name.slice(0, 2);
-      const gradeShort = i.grade === 'normal' ? '상' : '하';
+      const gradeShort = i.noGrade ? '' : (i.grade === 'normal' ? '상' : '하');
       const weightNum = String(i.weight).replace(/[^0-9]/g, '');
       return `${nameShort}${gradeShort}${weightNum}×${i.qty}`;
     }).join(', ');
@@ -1078,7 +1132,8 @@
     const name = card.dataset.name;
     const weight = card.querySelector('.opt-weight').value;
     const grade = card.querySelector('.opt-grade').value;
-    const gradeText = grade === 'normal' ? '선물용' : '가정용(못난이)';
+    const noGrade = (PRODUCT_OPTIONS[key]?.grade) === 'none';
+    const gradeText = noGrade ? '' : GRADE_NAMES[grade];
     const price = PRICES[key][grade][weight];
 
     card.classList.add('added-anim');
@@ -1088,13 +1143,13 @@
     if(existingIndex > -1) {
       cart[existingIndex].qty += 1;
     } else {
-      cart.push({ key, name, weight, grade, gradeText, price, qty: 1 });
+      cart.push({ key, name, weight, grade, gradeText, noGrade, price, qty: 1 });
     }
 
     updateCartUI();
 
     if (isMobileViewport()) {
-      showPeekSheet(`${name} (${weight}/${gradeText}) 담겼습니다`);
+      showPeekSheet(`${name} (${optText(weight, gradeText)}) 담겼습니다`);
     } else {
       openPanel('cart');
     }
@@ -1187,7 +1242,7 @@
       resetCartBtn.style.display = 'none';
       footerSummary.style.display = 'block';
 
-      const summaryItems = cart.map(i => `${i.name} (${i.weight}/${i.gradeText}) x ${i.qty}개`).join(', ');
+      const summaryItems = cart.map(i => `${i.name} (${optText(i.weight, i.gradeText)}) x ${i.qty}개`).join(', ');
       document.getElementById('orderSummaryText').textContent = summaryItems;
     } else if(step === 3) {
       titleEl.textContent = '주문 전송 선택';
@@ -1215,6 +1270,20 @@
   // 주문 접수 — 솔라피 연동 Netlify Function 호출 (고객/사장님 자동 문자 발송 + 주문 저장)
   async function submitOrder() {
     if (seasonOut) { alert('현재는 판매 시즌이 아니라 주문 접수를 할 수 없습니다.'); return; }
+
+    // 최신 판매 옵션을 다시 불러와서, 장바구니에 판매 중지된 옵션이 있는지 확인
+    await loadPricesPublic();
+    const unavailable = cart.filter(i => {
+      const opt = PRODUCT_OPTIONS[i.key] || { grade:'both', weights:ALL_WEIGHTS };
+      return !(opt.weights.includes(i.weight) && allowedGrades(opt.grade).includes(i.grade));
+    });
+    if (unavailable.length) {
+      alert('현재 판매하지 않는 옵션이 장바구니에 있습니다.\n' +
+        unavailable.map(i => `- ${i.name} (${optText(i.weight, i.gradeText)})`).join('\n') +
+        '\n장바구니에서 삭제한 뒤 다시 접수해 주세요.');
+      return;
+    }
+
     const btn = document.getElementById('submitOrderBtn');
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
@@ -1224,7 +1293,7 @@
     const depositor = document.getElementById('custDepositor').value || name;
     const memo = document.getElementById('custMemo').value || '없음';
 
-    const itemsStr = cart.map(i => `- ${i.name} (${i.weight}/${i.gradeText}) x ${i.qty}개`).join('\n');
+    const itemsStr = cart.map(i => `- ${i.name} (${optText(i.weight, i.gradeText)}) x ${i.qty}개`).join('\n');
     const itemsShort = buildShortItemsSummary(cart);
     const totalStr = document.getElementById('finalTotalPrice').textContent;
 
@@ -1289,7 +1358,7 @@
         <div class="cart-item">
           <div class="cart-item-info">
             <h4>${item.name}</h4>
-            <p>${item.weight} / ${item.gradeText}</p>
+            <p>${optText(item.weight, item.gradeText)}</p>
             <div class="cart-item-qty">
               <button class="qty-btn" onclick="changeQty(${idx}, -1)">-</button>
               <span>${item.qty}</span>
@@ -1727,53 +1796,119 @@
   const PRICE_WEIGHTS = ['3kg','5kg','10kg'];
   const PRICE_GRADES = [['normal','선물용'], ['ugly','가정용(못난이)']];
 
+  const GRADE_MODE_LABELS = [['both','선물용+가정용'], ['normal','선물용만'], ['ugly','가정용(못난이)만'], ['none','구분 없음']];
+
+  function getEditorGradeMode(key){
+    const r = document.querySelector(`input[name="grade-mode-${key}"]:checked`);
+    return r ? r.value : 'both';
+  }
+
   function renderPriceEditor(){
     const el = document.getElementById('priceEditorList');
     if(!el) return;
-    el.innerHTML = PRICE_KEYS.map(key => `
+    el.innerHTML = PRICE_KEYS.map(key => {
+      const opt = PRODUCT_OPTIONS[key] || { grade:'both', weights:PRICE_WEIGHTS.slice() };
+      return `
       <div class="admin-item" style="grid-template-columns:1fr;">
         <div>
           <b>${PRICE_LABELS[key]}</b>
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;">
+          <div style="margin-top:10px; font-size:12px; font-weight:700;">판매 등급</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:6px;">
+            ${GRADE_MODE_LABELS.map(([m,l]) => `
+              <label style="font-size:12px; display:flex; align-items:center; gap:4px;">
+                <input type="radio" name="grade-mode-${key}" value="${m}" ${opt.grade===m?'checked':''} onchange="refreshPriceEditorRow('${key}')">${l}
+              </label>`).join('')}
+          </div>
+          <div style="margin-top:10px; font-size:12px; font-weight:700;">판매 중량</div>
+          <div style="display:flex; gap:14px; margin-top:6px;">
+            ${PRICE_WEIGHTS.map(w => `
+              <label style="font-size:12px; display:flex; align-items:center; gap:4px;">
+                <input type="checkbox" id="wsel-${key}-${w}" ${opt.weights.includes(w)?'checked':''} onchange="refreshPriceEditorRow('${key}')">${w}
+              </label>`).join('')}
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px;">
             ${PRICE_GRADES.map(([gKey,gLabel]) => PRICE_WEIGHTS.map(w => `
-              <div>
-                <label style="font-size:10.5px; color:#777; display:block; margin-bottom:4px;">${gLabel} ${w}</label>
+              <div id="pwrap-${key}-${gKey}-${w}">
+                <label id="plabel-${key}-${gKey}-${w}" style="font-size:10.5px; color:#777; display:block; margin-bottom:4px;">${gLabel} ${w}</label>
                 <input type="number" id="price-${key}-${gKey}-${w}" value="${PRICES[key][gKey][w]}" style="width:100%; padding:7px 8px; border:1px solid var(--cream-line); border-radius:8px; font-size:12.5px;">
               </div>
             `).join('')).join('')}
           </div>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
+    PRICE_KEYS.forEach(key => refreshPriceEditorRow(key));
+  }
+
+  // 등급/중량 설정에 따라 가격 칸을 활성/비활성(회색) 처리 — 입력해둔 값은 지우지 않음
+  function refreshPriceEditorRow(key){
+    const mode = getEditorGradeMode(key);
+    const activeGrades = allowedGrades(mode);
+    PRICE_GRADES.forEach(([gKey,gLabel]) => {
+      PRICE_WEIGHTS.forEach(w => {
+        const weightOn = document.getElementById(`wsel-${key}-${w}`).checked;
+        const on = weightOn && activeGrades.includes(gKey);
+        document.getElementById(`price-${key}-${gKey}-${w}`).disabled = !on;
+        document.getElementById(`pwrap-${key}-${gKey}-${w}`).style.opacity = on ? '1' : '.4';
+        const gName = (mode === 'none' && gKey === 'normal') ? PRICE_LABELS[key] : gLabel;
+        document.getElementById(`plabel-${key}-${gKey}-${w}`).textContent = `${gName} ${w}`;
+      });
+    });
   }
 
   async function savePrices(){
     const btn = document.getElementById('priceSaveBtn');
     const updated = {};
-    PRICE_KEYS.forEach(key => {
+    const options = {};
+    let errorMsg = null;
+
+    for(const key of PRICE_KEYS){
+      const mode = getEditorGradeMode(key);
+      const weights = PRICE_WEIGHTS.filter(w => document.getElementById(`wsel-${key}-${w}`).checked);
+      if(weights.length === 0){
+        errorMsg = `${PRICE_LABELS[key]}: 판매 중량을 1개 이상 선택해 주세요.`;
+        break;
+      }
+      options[key] = { grade: mode, weights };
+
       updated[key] = { normal:{}, ugly:{} };
       PRICE_GRADES.forEach(([gKey]) => {
         PRICE_WEIGHTS.forEach(w => {
-          const input = document.getElementById(`price-${key}-${gKey}-${w}`);
-          const val = parseInt(input.value, 10);
+          const val = parseInt(document.getElementById(`price-${key}-${gKey}-${w}`).value, 10);
           updated[key][gKey][w] = isNaN(val) ? 0 : val;
         });
       });
-    });
+
+      // 실제로 판매하는 옵션의 가격은 0원보다 커야 함
+      for(const gKey of allowedGrades(mode)){
+        for(const w of weights){
+          if(!(updated[key][gKey][w] > 0)){
+            const gName = (mode === 'none') ? PRICE_LABELS[key] : GRADE_NAMES[gKey];
+            errorMsg = `${PRICE_LABELS[key]} ${gName} ${w} 가격을 입력해 주세요.`;
+            break;
+          }
+        }
+        if(errorMsg) break;
+      }
+      if(errorMsg) break;
+    }
+
+    if(errorMsg){ alert(errorMsg); return; }
 
     btn.disabled = true;
     btn.textContent = '저장 중...';
     try{
       const res = await fetch('/.netlify/functions/prices', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ prices: updated })
+        body: JSON.stringify({ prices: updated, options })
       });
       if(!res.ok) throw new Error('저장 실패');
       PRICES = updated;
-      priceUpdaters.forEach(fn => fn());
-      alert('가격이 저장되었습니다. 모든 방문자 화면에 반영됩니다.');
+      PRODUCT_OPTIONS = options;
+      applyProductOptions();
+      alert('저장되었습니다. 모든 방문자 화면에 반영됩니다.');
     }catch(err){
-      alert('가격 저장에 실패했습니다.');
+      alert('저장에 실패했습니다.');
       console.error(err);
     }finally{
       btn.disabled = false;
@@ -1948,7 +2083,7 @@
       <!-- 가격 관리 -->
       <div class="admin-tab-panel" id="adminTabPrices" style="display:none;">
         <p style="font-size:13px; line-height:1.7; color:rgba(30,27,24,.7);">
-          가격을 수정하고 저장하면 모든 방문자 화면에 즉시 반영됩니다. (이미 접수된 과거 주문의 결제금액에는 영향 없습니다.)
+          품종별로 판매 등급(선물용/가정용/구분 없음)과 판매 중량을 고르고 가격을 입력하세요. 저장하면 모든 방문자 화면에 즉시 반영되며, 판매하지 않는 옵션의 가격 칸은 회색으로 표시됩니다. (이미 접수된 과거 주문의 결제금액에는 영향 없습니다.)
         </p>
         <div id="priceEditorList" style="margin-top:16px;"></div>
         <button class="btn btn-primary" id="priceSaveBtn" style="width:100%; justify-content:center; margin-top:16px;" onclick="savePrices()">가격 저장하기</button>
