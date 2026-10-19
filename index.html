@@ -582,7 +582,7 @@
   <div class="panel-footer" id="cartFooter">
     <div id="cartFooterSummary">
       <div class="cart-summary-row"><span>상품 금액</span><span id="subTotalPrice">0원</span></div>
-      <div class="cart-summary-row"><span>배송비 (10kg 이상/5만원 이상 무료)</span><span id="shippingFee">0원</span></div>
+      <div class="cart-summary-row"><span>배송비 (무료)</span><span id="shippingFee">0원</span></div>
       <div class="cart-summary-total"><span>총 결제금액</span><span id="finalTotalPrice">0원</span></div>
     </div>
     
@@ -900,7 +900,7 @@
       <h2>구매 및 배송 안내</h2>
       <div class="order-info-list">
         <div class="oi-row"><b>발송</b><span>오후 2시 이전 주문 시 당일 선과 · 익일 발송</span></div>
-        <div class="oi-row"><b>배송비</b><span>10kg 이상/5만원 이상 무료 · 미만 3,000원</span></div>
+        <div class="oi-row"><b>배송비</b><span>(무료)</span></div>
         <div class="oi-row"><b>입금 계좌</b><span>농협 977-02-064447 (예금주: 김상자)</span></div>
         <div class="oi-row"><b>문의 전화</b><span>010-9880-2835</span></div>
       </div>
@@ -1373,7 +1373,7 @@
       `;
     }).join('');
 
-    const shipping = (subTotal >= 50000 || has10kg) ? 0 : 3000;
+    const shipping = 0;
     subTotalPrice.textContent = subTotal.toLocaleString('ko-KR') + '원';
     shippingFee.textContent = shipping === 0 ? '무료' : shipping.toLocaleString('ko-KR') + '원';
     finalTotalPrice.textContent = (subTotal + shipping).toLocaleString('ko-KR') + '원';
